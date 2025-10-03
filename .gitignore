@@ -1,0 +1,14 @@
+.vscode
+.code
+.venv
+.idea
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.env
+*.xls
+*.xlsx
+mysql_data
+*.log
+*.drawio.bkp

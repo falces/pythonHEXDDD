@@ -1,0 +1,24 @@
+openapi: 3.1.1
+info:
+  title: 3PL API
+  description: API to operate with multiple 3PL providers
+  version: 0.1.9
+
+servers:
+  - url: http://localhost:8080
+    description: Local (Docker) server, for development purposes
+
+paths:
+  /api/v1/countries/:
+    get:
+      summary: Returns a list of countries.
+      description: Retrieves all the countries from database with the different IDs per provider
+      responses:
+        "200":
+          description: A JSON array of countries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string

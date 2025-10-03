@@ -1,0 +1,45 @@
+services:
+  app:
+    env_file: .env
+    build:
+      context: ../
+      dockerfile: ./docker/Dockerfile
+    container_name: ${SERVICE_NAME}_app
+    working_dir: /src/app
+    volumes:
+      - ../app:/src/app
+    ports:
+      - ${PUBLIC_HTTP_PORT}:${PRIVATE_HTTP_PORT}
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/sh /src/init.sh
+    depends_on:
+      - db
+    environment:
+      FLASK_DEBUG: 1
+      FLASK_APP: ./app.py
+      PYTHONPYCACHEPREFIX: $HOME/.cache/cpython/
+    networks:
+      - shared_net
+  db:
+    image: mysql:9.1.0
+    container_name: ${SERVICE_NAME}_db
+    ports:
+      - ${MYSQL_PUBLIC_PORT}:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      timeout: 20s
+      retries: 3
+    networks:
+      - shared_net
+networks:
+  shared_net:
+    external: true
+    name: common_network
