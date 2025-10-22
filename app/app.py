@@ -4,6 +4,7 @@ from config.environment import configureEnvironment
 from config.exceptionHanlder import exceptionHandler
 from config.log import configureLogs
 from config.signals import configureSignals
+from config.controllers import configureControllers
 
 
 app = Flask(__name__)
@@ -13,12 +14,7 @@ signals = configureSignals(app)
 configureEnvironment(app)
 db = configureDatabase(app)
 exceptionHandler(app)
-
-from Infrastructure.Controller.Controller import v1ControllerBase
-from Infrastructure.Controller.ToolsController import toolsController
-
-app.register_blueprint(v1ControllerBase, url_prefix='/api/v1')
-app.register_blueprint(toolsController, url_prefix='/tools')
+configureControllers(app)
 
 @app.route('/', methods=['GET'])
 def index():

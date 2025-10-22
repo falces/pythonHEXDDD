@@ -4,7 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
 def configureDatabase(app: Flask):
-    mysql_local = 'mysql+mysqlconnector://' + environ.get('MYSQL_USER') + ':' + environ.get('MYSQL_PASSWORD') + '@pt_db:3306/pythontemplate'
+    mysql_local = 'mysql+mysqlconnector://' + environ.get('MYSQL_USER') + ':' + environ.get('MYSQL_PASSWORD') + '@pythonhexddd:3306/table'
     # mysql_local = 'mysql+mysqlconnector://thirdpl:thirdpl@localhost:13306/ThirdPL'
 
     app.config['SQLALCHEMY_DATABASE_URI'] = mysql_local

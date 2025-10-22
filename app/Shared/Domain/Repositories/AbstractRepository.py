@@ -15,3 +15,7 @@ class AbstractRepository(ABC):
     @abstractmethod
     def findAll(self):
         pass
+    
+    @abstractmethod
+    def findByCriteria(self):
+        pass
