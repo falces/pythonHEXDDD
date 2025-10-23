@@ -9,7 +9,7 @@ services:
     volumes:
       - ../app:/src/app
     ports:
-      - ${PUBLIC_HTTP_PORT}:${PRIVATE_HTTP_PORT}
+      - ${HOST_HTTP_PORT}:${APPLICATION_HTTP_PORT}
     stdin_open: true
     tty: true
     entrypoint: /bin/sh /src/init.sh
