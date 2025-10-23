@@ -1,5 +1,4 @@
 from flask import Blueprint, request
-# from Application.HelloWorldService import HelloWorldService
 from Application.MoviesService import MoviesService
 from Infrastructure.Repository.ShowsRepository import ShowsRepository
 from Infrastructure.Controller.ControllerBase import ControllerBase
@@ -11,9 +10,7 @@ moviesController = Blueprint('moviesController', __name__)
 class MoviesController():
 
     @moviesController.route('/', methods=['GET'])
-    def getMoviesBy():
-        app.logger.info("Query String: " + str(request.query_string))
-        
+    def getMoviesBy():        
         moviesService = MoviesService(ShowsRepository)
 
         return ControllerBase.formatResponse(

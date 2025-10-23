@@ -1,5 +1,4 @@
 import requests
-import json
 from flask import current_app as app
 from Shared.Domain.Exceptions.HTTPGetRequestException import HTTPGetRequestException
 
@@ -23,9 +22,18 @@ class APITools:
                 params = params,
                 headers = self.headers,
             )
-            app.logger.info("Results: " + str(len(response.content)))
+            
+            self.__logAPIRequest(
+                url = self.host + endpoint,
+                method = 'GET',
+                params = params,
+                responseCount = len(response.content),
+            )
+            
             response.raise_for_status()
+
             return response
+        
         except (requests.exceptions.HTTPError,
                 requests.exceptions.ConnectionError,
                 requests.exceptions.Timeout,
@@ -47,3 +55,18 @@ class APITools:
             headers=headers
         )
         return response
+    
+    def __logAPIRequest(
+        self,
+        url: str,
+        method: str,
+        params: dict = None,
+        responseCount: int = None,
+    ):
+        queryString = ''
+        for param in params:
+            queryString += param + '=' + params[param] + '&'
+
+        app.logger.info("Request: [" + method + "]" + url)
+        app.logger.info("QueryString: " + queryString)
+        app.logger.info("Lines: " + str(responseCount))
