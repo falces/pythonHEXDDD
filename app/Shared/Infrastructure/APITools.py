@@ -67,6 +67,6 @@ class APITools:
         for param in params:
             queryString += param + '=' + params[param] + '&'
 
-        app.logger.info("Request: [" + method + "]" + url)
+        app.logger.info("Request: [" + method + "] " + url)
         app.logger.info("QueryString: " + queryString)
         app.logger.info("Lines: " + str(responseCount))
