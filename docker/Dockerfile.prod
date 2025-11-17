@@ -1,0 +1,21 @@
+# FROM python:3.12.3-alpine3.20
+FROM ubuntu:25.10
+
+WORKDIR /src
+
+RUN apt-get update -y
+RUN apt-get upgrade -y
+RUN apt-get install python3-pip -y
+RUN apt-get install python3-venv -y
+RUN python3 -m venv appenv
+RUN . appenv/bin/activate
+
+RUN pip install --upgrade pip
+
+COPY requirements.txt.prod ./requirements.txt
+
+RUN pip install -r requirements.txt
+
+COPY ./docker/.env.prod ./.env
+COPY ./docker/init.prod.sh ./init.sh
+RUN chmod +x init.sh
