@@ -5,6 +5,7 @@ from config.exceptionHanlder import exceptionHandler
 from config.log import configureLogs
 from config.signals import configureSignals
 from config.controllers import configureControllers
+from config.container import init_container
 
 
 app = Flask(__name__)
@@ -13,6 +14,10 @@ configureLogs(app)
 signals = configureSignals(app)
 configureEnvironment(app)
 db = configureDatabase(app)
+
+# Inicializar el DI Container
+app.container = init_container(app)
+
 exceptionHandler(app)
 configureControllers(app)
 

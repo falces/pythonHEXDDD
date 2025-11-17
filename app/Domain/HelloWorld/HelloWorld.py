@@ -1,17 +1,55 @@
 from Domain.HelloWorld.ValueObjects.Greeting import Greeting
+from Domain.HelloWorld.Events.HelloWorldCreated import HelloWorldCreated
 from Shared.Domain.Entities.EntityBase import AggregateRootBase
-from Domain.HelloWorld.HelloWorldModel import HelloWorldModel
+
 
 class HelloWorld(AggregateRootBase):
+    """
+    Entidad de dominio HelloWorld - Aggregate Root.
+    Esta entidad es pura y no conoce detalles de persistencia.
+    """
+    
     def __init__(
         self,
         greeting: Greeting,
+        id: int = None
     ):
-        self.name = greeting
-
-        self.model = HelloWorldModel(
-            greeting=self.name.getValue(),
+        super().__init__()
+        self._id = id
+        self.greeting = greeting
+    
+    @staticmethod
+    def create(greeting: Greeting) -> 'HelloWorld':
+        """
+        Factory method para crear un nuevo HelloWorld.
+        Registra automáticamente el evento de creación.
+        
+        Args:
+            greeting: El saludo a crear
+            
+        Returns:
+            HelloWorld: Nueva instancia con evento registrado
+        """
+        hello_world = HelloWorld(greeting=greeting)
+        # El evento se registrará después de tener el ID (en el use case)
+        return hello_world
+    
+    def mark_as_created(self, id: int) -> None:
+        """
+        Marca el HelloWorld como creado y registra el evento.
+        Se llama después de persistir en el repositorio cuando ya tenemos el ID.
+        
+        Args:
+            id: El ID asignado por la base de datos
+        """
+        self._id = id
+        event = HelloWorldCreated(
+            hello_world_id=id,
+            greeting=self.greeting.value
         )
-
-    def toDict(self) -> dict:
-        return self.model.toDict()
+        self.record_event(event)
+    
+    @property
+    def id(self) -> int:
+        """ID del HelloWorld."""
+        return self._id

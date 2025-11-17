@@ -1,44 +1,53 @@
-from Shared.Domain.Repositories.AbstractRepository import AbstractRepository
-from Domain.HelloWorld import HelloWorld
-from app import signals
-import uuid
-from Application.DTO import GreetingDTO
-from Shared.Application.CreateExcelService import CreateExcelService
+from Domain.Show.ShowRepositoryInterface import ShowRepositoryInterface
+from Infrastructure.ExternalAPI.Mappers.ShowMapper import ShowMapper
+from typing import Dict, List
 
 
 class MoviesService:
+    """
+    Servicio de aplicación para Shows/Movies.
+    Orquesta las operaciones de dominio y coordina con el repositorio.
+    """
+    
     def __init__(
         self,
-        repository: AbstractRepository,
+        repository: ShowRepositoryInterface,
     ):
-        self.repository = repository()
+        # Recibe la instancia del repositorio (Inyección de Dependencias)
+        self.repository = repository
 
     def getMoviesByCriteria(
         self,
-        args: dict = None,
-        resultsInFile: bool = False,
-        fileName: str = None,
-    ) -> list:
-        movies = self.repository.findByCriteria(
-            args = args,
-        )
-
-        if resultsInFile:
-            CreateExcelService.createExcelFromAPIResponse(movies.json(), fileName)
+        criteria: Dict[str, any],
+    ) -> List[dict]:
+        """
+        Obtiene shows/movies según criterios de búsqueda.
+        
+        Args:
+            criteria: Diccionario con criterios de búsqueda
             
-        return movies
+        Returns:
+            Lista de shows en formato diccionario
+        """
+        # Obtener entidades de dominio desde el repositorio
+        shows = self.repository.findByCriteria(criteria)
+        
+        # Convertir entidades a diccionarios para la respuesta
+        return ShowMapper.toDictList(shows)
     
-    def addCountry(
-        self,
-        greetingDTO: GreetingDTO,
-    ):
-        greeting = HelloWorld(
-            name = greetingDTO.name,
-        )
-
-        self.repository.save(greeting)
-
-        signals['new_hello_world'].send(
-            sender=uuid.uuid4().hex,
-            message=greeting.toDict(),
-        )
+    def getShowById(self, show_id: str) -> dict:
+        """
+        Obtiene un show por su ID.
+        
+        Args:
+            show_id: Identificador del show
+            
+        Returns:
+            Show en formato diccionario o None si no existe
+        """
+        show = self.repository.findById(show_id)
+        
+        if show is None:
+            return None
+        
+        return ShowMapper.toDict(show)

@@ -1,24 +1,402 @@
-openapi: 3.1.1
+openapi: 3.0.3
 info:
-  title: 3PL API
-  description: API to operate with multiple 3PL providers
-  version: 0.1.9
+  title: PythonHEXDDD API
+  description: |
+    API RESTful implementada con arquitectura hexagonal (Clean Architecture) y Domain-Driven Design.
+    
+    ## Características
+    
+    - Arquitectura Hexagonal
+    - Domain-Driven Design (DDD)
+    - CQRS con Use Cases
+    - Domain Events
+    - Dependency Injection
+    - Repository Pattern
+    
+    ## Autenticación
+    
+    Actualmente la API no requiere autenticación (para propósitos de desarrollo).
+    
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@pythonhexddd.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
 
 servers:
+  - url: http://localhost:5000
+    description: Servidor de desarrollo local
   - url: http://localhost:8080
-    description: Local (Docker) server, for development purposes
+    description: Servidor Docker local
+
+tags:
+  - name: HelloWorld
+    description: Operaciones CRUD para entidades HelloWorld
+  - name: Shows
+    description: Búsqueda y consulta de shows/películas/series
 
 paths:
-  /api/v1/countries/:
+  /api/v1/hello-world/:
     get:
-      summary: Returns a list of countries.
-      description: Retrieves all the countries from database with the different IDs per provider
+      tags:
+        - HelloWorld
+      summary: Obtener todos los HelloWorld
+      description: Retorna una lista de todas las entidades HelloWorld registradas en el sistema
+      operationId: getAllHelloWorld
       responses:
-        "200":
-          description: A JSON array of countries
+        '200':
+          description: Lista de HelloWorld obtenida exitosamente
           content:
             application/json:
               schema:
                 type: array
                 items:
+                  $ref: '#/components/schemas/HelloWorld'
+              example:
+                - id: 1
+                  greeting: "Hello World"
+                - id: 2
+                  greeting: "Hola Mundo"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      tags:
+        - HelloWorld
+      summary: Crear nuevo HelloWorld
+      description: Crea una nueva entidad HelloWorld con el greeting proporcionado
+      operationId: createHelloWorld
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
                   type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Texto del saludo (greeting)
+                  example: "Hello from Spain"
+            examples:
+              simple:
+                summary: Saludo simple
+                value:
+                  name: "Hello World"
+              multilingual:
+                summary: Saludo multilingüe
+                value:
+                  name: "¡Hola Mundo! 你好世界"
+      responses:
+        '201':
+          description: HelloWorld creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HelloWorld'
+              example:
+                id: 3
+                greeting: "Hello from Spain"
+        '400':
+          description: Petición inválida (greeting vacío o faltante)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Field 'name' is required"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/v1/hello-world/{id}:
+    get:
+      tags:
+        - HelloWorld
+      summary: Obtener HelloWorld por ID
+      description: Retorna una entidad HelloWorld específica identificada por su ID
+      operationId: getHelloWorldById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID único del HelloWorld
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      responses:
+        '200':
+          description: HelloWorld encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HelloWorld'
+              example:
+                id: 1
+                greeting: "Hello World"
+        '404':
+          description: HelloWorld no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "HelloWorld not found"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      tags:
+        - HelloWorld
+      summary: Eliminar HelloWorld
+      description: Elimina una entidad HelloWorld del sistema por su ID
+      operationId: deleteHelloWorld
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del HelloWorld a eliminar
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      responses:
+        '200':
+          description: HelloWorld eliminado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "HelloWorld deleted successfully"
+        '404':
+          description: HelloWorld no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "HelloWorld not found"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/v1/movies/:
+    get:
+      tags:
+        - Shows
+      summary: Buscar shows/películas
+      description: |
+        Busca shows (películas o series) según criterios de búsqueda.
+        Soporta filtrado por país y tipo de show.
+      operationId: searchShows
+      parameters:
+        - name: country
+          in: query
+          description: Código de país (ISO 3166-1 alpha-2)
+          required: false
+          schema:
+            type: string
+            pattern: '^[a-z]{2}$'
+            example: "us"
+        - name: showType
+          in: query
+          description: Tipo de show
+          required: false
+          schema:
+            type: string
+            enum: [movie, series]
+            example: "movie"
+      responses:
+        '200':
+          description: Lista de shows encontrados
+          content: # El ejemplo debe estar dentro del content type
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Show'
+              example: # Ejemplo movido a la posición correcta
+                - id: "ts123456"
+                  title: "The Matrix"
+                  showType: "movie"
+                  streamingOptions:
+                    - service: "Netflix"
+                      type: "subscription"
+                - id: "ts789012"
+                  title: "Breaking Bad"
+                  showType: "series"
+                  streamingOptions:
+                    - service: "Amazon Prime"
+                      type: "subscription"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  
+  /api/v1/movies/{show_id}:
+    get:
+      tags:
+        - Shows
+      summary: Obtener show por ID
+      description: Retorna un show específico (película o serie) por su ID
+      operationId: getShowById
+      parameters:
+        - name: show_id
+          in: path
+          required: true
+          description: ID único del show
+          schema:
+            type: string
+            pattern: '^ts[0-9]+$'
+          example: "ts123456"
+      responses:
+        '200':
+          description: Show encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Show'
+              example:
+                id: "ts123456"
+                title: "The Matrix"
+                showType: "movie"
+                streamingOptions:
+                  - service: "Netflix"
+                    type: "subscription"
+                  - service: "Amazon Prime"
+                    type: "rent"
+        '404':
+          description: Show no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Show not found"
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    HelloWorld:
+      type: object
+      required:
+        - id
+        - greeting
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: ID único del HelloWorld
+          example: 1
+        greeting:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Texto del saludo
+          example: "Hello World"
+      example:
+        id: 1
+        greeting: "Hello World"
+    
+    Show:
+      type: object
+      required:
+        - id
+        - title
+        - showType
+      properties:
+        id:
+          type: string
+          pattern: '^ts[0-9]+$|^tt[0-9]+$' # Incluir formato 'tt' como en los documentos de refactor
+          description: ID único del show (formato ThingStream)
+          example: "ts123456"
+        title:
+          type: string
+          description: Título del show
+          example: "The Matrix"
+        showType:
+          type: string
+          enum: [movie, series]
+          description: Tipo de contenido
+          example: "movie"
+        streamingOptions:
+          type: array
+          description: Opciones de streaming disponibles
+          items:
+            $ref: '#/components/schemas/StreamingOption'
+      example:
+        id: "ts123456"
+        title: "The Matrix"
+        showType: "movie"
+        streamingOptions:
+          - service: "Netflix"
+            type: "subscription"
+    
+    StreamingOption:
+      type: object
+      required:
+        - service
+        - type
+        - link
+      properties:
+        service:
+          type: string
+          description: Nombre del servicio de streaming
+          example: "Netflix"
+        type:
+          type: string # El tipo de acceso es más un enum
+          description: Tipo de acceso al contenido (suscripción, alquiler, compra, etc.)
+          enum: [subscription, rent, buy, addon, free]
+          example: "subscription"
+        link:
+          type: string
+          format: uri
+          description: Enlace directo al contenido en el servicio
+          example: "https://www.netflix.com/watch/12345"
+      example:
+        service: "Netflix"
+        type: "subscription"
+    
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Mensaje de error descriptivo
+          example: "Resource not found"
+      example:
+        error: "Resource not found"

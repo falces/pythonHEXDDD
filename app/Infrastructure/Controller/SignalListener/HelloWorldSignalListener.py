@@ -1,4 +1,4 @@
-from app import signals
+from config.signals import signals
 from flask import Blueprint
 from Infrastructure.Repository.HelloWorldRepository import HelloWorldRepository
 from Application.HelloWorldService import HelloWorldService
@@ -14,9 +14,15 @@ class HelloWorldSignalListener():
         sender: str,
         message: dict,
     ):
+        """
+        Listener para el evento de nuevo HelloWorld.
+        Nota: Este patrón debería moverse a usar eventos de dominio propiamente.
+        """
         countryDTO = GreetingDTO(
-            name = message['name'],
+            name = message['greeting'],
         )
 
-        statusService = HelloWorldService(HelloWorldRepository)
-        statusService.addCountry(countryDTO)
+        # Instanciar el repositorio y pasarlo al servicio
+        repository = HelloWorldRepository()
+        statusService = HelloWorldService(repository)
+        statusService.addHelloWorld(countryDTO)
