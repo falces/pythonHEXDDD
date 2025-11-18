@@ -1,45 +1,594 @@
-# Overview
+# Python Hexagonal DDD + CQRS
 
-This application is an excercise of how to apply Domain Driven Design, hexagonal architecture and Solid principes with Python, by developing a backend application.
+Proyecto de ejemplo implementando **Arquitectura Hexagonal (Puertos y Adaptadores)**, **Domain-Driven Design (DDD)**, **CQRS (Command Query Responsibility Segregation)** y **Event-Driven Architecture** con Python y Flask.
 
-As my background comes from PHP and Symfony, I've developed using the same methodology, and the result is an application with:
+## 📋 Tabla de Contenidos
 
-- API: I've selected Flask as API library.
-- Database management: using Flask migrations, the database is built from the entities. The system creates migrations for build and manage the database.
-- Events: the communication between the different services of the application is done by events, so the services are decoupled from the flow.
-- Logs: write logs for debug and performing pourposes.
-- Exceptions: all exceptions are managed and controled. The are registered in the log and also in the API responses.
-- The system reads from external APIs and authenticate by API Key.
-- With DDD concepts: Aggregates, Entities, Models, Repository, DTOs, Value Objects.
-- Use abstract clases to create interfaces, so I can invert dependencies.
+- [Arquitectura](#arquitectura)
+- [Flujos de la Aplicación](#flujos-de-la-aplicación)
+  - [Flujo de Inicialización](#1-flujo-de-inicialización-de-la-aplicación)
+  - [Flujo de Escritura (Commands)](#2-flujo-de-escritura-commands---crear-helloworld)
+  - [Flujo de Lectura (Queries)](#3-flujo-de-lectura-queries---obtener-todos-los-helloworld)
+  - [Flujo de Eventos de Dominio](#4-flujo-de-eventos-de-dominio)
+  - [Flujo CQRS Completo](#5-flujo-cqrs-completo-con-command-bus-y-query-bus)
+- [Estructura del Proyecto](#estructura-del-proyecto)
+- [Documentación Adicional](#documentación-adicional)
 
-There are several services that perform operations like:
+## 🏗️ Arquitectura
 
-- Read external API
-- Save to database, and manage relationships between entites.
-- Read from database
+El proyecto implementa una arquitectura en capas siguiendo los principios de Clean Architecture y Hexagonal Architecture:
 
-# Install
-
-## Requirements
-
-The application requires Docker Desktop to run. In the folder ./docker you can find the Docker configuration.
-
-## Clone the repository
-
-## Start the application
-
-Create network
-
-```bash
-docker network create common_network
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Infrastructure Layer                       │
+│  (Controllers, Repositories, API Clients, Event Handlers)   │
+├─────────────────────────────────────────────────────────────┤
+│                    Application Layer                         │
+│      (Use Cases, Commands, Queries, Handlers, Buses)        │
+├─────────────────────────────────────────────────────────────┤
+│                      Domain Layer                            │
+│    (Entities, Value Objects, Domain Events, Interfaces)     │
+└─────────────────────────────────────────────────────────────┘
 ```
 
+### Patrones Implementados
 
+- ✅ **Hexagonal Architecture** - Separación entre dominio e infraestructura
+- ✅ **Domain-Driven Design** - Entidades, Value Objects, Aggregates
+- ✅ **CQRS** - Separación de Commands (escritura) y Queries (lectura)
+- ✅ **Event-Driven** - Domain Events con EventDispatcher
+- ✅ **Dependency Injection** - DI Container con dependency-injector
+- ✅ **Repository Pattern** - Abstracción de persistencia
+- ✅ **Use Cases** - Lógica de aplicación encapsulada
 
-# Development
+---
 
-Basic flow
+## 🔄 Flujos de la Aplicación
 
-![image-20250702104815934](.\README.assets\image-20250702104815934.png)
+### 1. Flujo de Inicialización de la Aplicación
 
+**Archivo inicial**: `app/app.py`
+
+```
+app.py (Flask App)
+  │
+  ├─► configureLogs(app)
+  │     └─► config/log.py
+  │           └─► Configura logging con archivos rotativos
+  │
+  ├─► configureSignals(app)
+  │     └─► config/signals.py
+  │           └─► Configura signal handlers (SIGTERM, SIGINT)
+  │
+  ├─► configureEnvironment(app)
+  │     └─► config/environment.py
+  │           └─► Carga variables de entorno (.env)
+  │
+  ├─► configureDatabase(app)
+  │     └─► config/database.py
+  │           └─► Inicializa SQLAlchemy con MySQL/SQLite
+  │
+  ├─► init_container(app)
+  │     └─► config/container.py
+  │           ├─► Inicializa DI Container
+  │           ├─► Registra repositorios (write/read)
+  │           ├─► Registra buses (CommandBus, QueryBus)
+  │           ├─► Registra handlers (Commands, Queries, Events)
+  │           ├─► Registra use cases
+  │           └─► Registra EventDispatcher y suscriptores
+  │
+  ├─► exceptionHandler(app)
+  │     └─► config/exceptionHandler.py
+  │           └─► Configura manejadores de excepciones globales
+  │
+  └─► configureControllers(app)
+        └─► config/controllers.py
+              ├─► Registra v1ControllerBase (/api/v1)
+              ├─► Registra toolsController (/tools)
+              └─► Registra Swagger UI (/api/docs)
+```
+
+**Responsabilidades por archivo:**
+
+| Archivo | Función | Invoca a |
+|---------|---------|----------|
+| `app.py` | Punto de entrada, inicializa Flask | Todos los configuradores |
+| `config/log.py` | Configura sistema de logs | - |
+| `config/signals.py` | Maneja señales del sistema | - |
+| `config/environment.py` | Carga variables de entorno | - |
+| `config/database.py` | Inicializa SQLAlchemy | - |
+| `config/container.py` | Configura Dependency Injection | Todas las clases del sistema |
+| `config/exceptionHandler.py` | Maneja excepciones globales | - |
+| `config/controllers.py` | Registra todos los blueprints | Controllers |
+
+---
+
+### 2. Flujo de Escritura (Commands) - Crear HelloWorld
+
+**Endpoint**: `POST /api/v1/hello-world/`
+
+```
+1. Cliente HTTP (POST /api/v1/hello-world/)
+   └─► Body: {"name": "Hello World"}
+         │
+         ▼
+2. Infrastructure/Controller/HelloWorldController.py
+   └─► createHelloWorld()
+         ├─► Valida request.get_json()
+         ├─► Obtiene use case del container
+         │     └─► current_app.container.create_hello_world_use_case()
+         ├─► Ejecuta: use_case.execute(data['name'])
+         └─► Retorna: ControllerBase.formatResponse(result, 201)
+               │
+               ▼
+3. Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py
+   └─► execute(greeting_text: str)
+         ├─► Crea Value Object
+         │     └─► Greeting.create(greeting_text)
+         │           └─► Domain/HelloWorld/ValueObjects/Greeting.py
+         │                 ├─► Valida: no vacío, longitud < 255
+         │                 └─► Retorna: Greeting instance
+         │
+         ├─► Crea entidad de dominio
+         │     └─► HelloWorld.create(greeting)
+         │           └─► Domain/HelloWorld/HelloWorld.py
+         │                 ├─► Crea instancia
+         │                 └─► Registra evento: HelloWorldCreated
+         │
+         ├─► Persiste en repositorio
+         │     └─► repository.save(hello_world)
+         │           └─► Infrastructure/Repository/HelloWorldRepository.py
+         │                 ├─► Mapea a modelo: HelloWorldMapper.toModel()
+         │                 ├─► Ejecuta: db.session.add(model)
+         │                 ├─► Ejecuta: db.session.commit()
+         │                 └─► Retorna: HelloWorld con ID asignado
+         │
+         ├─► Publica eventos de dominio
+         │     └─► event_dispatcher.publish_multiple(eventos)
+         │           └─► Shared/Infrastructure/Events/EventDispatcher.py
+         │                 ├─► Busca suscriptores para cada evento
+         │                 ├─► Invoca: subscriber.handle(event)
+         │                 │     ├─► Application/EventHandlers/HelloWorldCreatedLogger.py
+         │                 │     │     └─► logger.info("HelloWorld creado")
+         │                 │     └─► Infrastructure/Projections/HelloWorldProjection.py
+         │                 │           └─► Actualiza read models (eventual consistency)
+         │                 └─► Continúa aunque un suscriptor falle
+         │
+         └─► Serializa respuesta
+               └─► HelloWorldMapper.toDict(saved_entity)
+                     └─► Retorna: {"id": 1, "greeting": "Hello World"}
+                           │
+                           ▼
+4. Cliente HTTP recibe
+   └─► Status: 201 Created
+   └─► Body: {"id": 1, "greeting": "Hello World"}
+```
+
+**Archivos involucrados (en orden):**
+
+| # | Archivo | Responsabilidad | Siguiente paso |
+|---|---------|-----------------|----------------|
+| 1 | `Infrastructure/Controller/HelloWorldController.py` | Recibe HTTP request, valida datos | Use Case |
+| 2 | `Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py` | Orquesta la creación (use case) | Value Object |
+| 3 | `Domain/HelloWorld/ValueObjects/Greeting.py` | Valida reglas del greeting | Entidad |
+| 4 | `Domain/HelloWorld/HelloWorld.py` | Entidad de dominio, registra eventos | Repositorio |
+| 5 | `Infrastructure/Repository/HelloWorldRepository.py` | Persiste en base de datos | Event Dispatcher |
+| 6 | `Shared/Infrastructure/Events/EventDispatcher.py` | Distribuye eventos a suscriptores | Event Handlers |
+| 7 | `Application/EventHandlers/HelloWorldCreatedLogger.py` | Registra log del evento | - |
+| 8 | `Infrastructure/Projections/HelloWorldProjection.py` | Actualiza read models | - |
+| 9 | `Infrastructure/Persistence/Mappers/HelloWorldMapper.py` | Serializa respuesta | Controller |
+
+---
+
+### 3. Flujo de Lectura (Queries) - Obtener Todos los HelloWorld
+
+**Endpoint**: `GET /api/v1/hello-world/`
+
+```
+1. Cliente HTTP (GET /api/v1/hello-world/)
+         │
+         ▼
+2. Infrastructure/Controller/HelloWorldController.py
+   └─► getAllHelloWorld()
+         ├─► Obtiene use case del container
+         │     └─► current_app.container.get_all_hello_world_use_case()
+         ├─► Ejecuta: use_case.execute()
+         └─► Retorna: ControllerBase.formatResponse(result, 200)
+               │
+               ▼
+3. Application/UseCases/HelloWorld/GetAllHelloWorldUseCase.py
+   └─► execute()
+         ├─► Consulta repositorio
+         │     └─► repository.findAll()
+         │           └─► Infrastructure/Repository/HelloWorldRepository.py
+         │                 ├─► Ejecuta: db.session.query(HelloWorldModel).all()
+         │                 ├─► Mapea a dominio: HelloWorldMapper.toDomain()
+         │                 └─► Retorna: List[HelloWorld]
+         │
+         └─► Serializa lista
+               └─► [HelloWorldMapper.toDict(hw) for hw in lista]
+                     └─► Retorna: [{"id": 1, "greeting": "..."}, ...]
+                           │
+                           ▼
+4. Cliente HTTP recibe
+   └─► Status: 200 OK
+   └─► Body: [{"id": 1, "greeting": "Hello World"}, ...]
+```
+
+**Archivos involucrados (en orden):**
+
+| # | Archivo | Responsabilidad | Siguiente paso |
+|---|---------|-----------------|----------------|
+| 1 | `Infrastructure/Controller/HelloWorldController.py` | Recibe HTTP request | Use Case |
+| 2 | `Application/UseCases/HelloWorld/GetAllHelloWorldUseCase.py` | Orquesta la consulta | Repositorio |
+| 3 | `Infrastructure/Repository/HelloWorldRepository.py` | Consulta base de datos | Mapper |
+| 4 | `Infrastructure/Persistence/Mappers/HelloWorldMapper.py` | Convierte modelos a dominio y DTO | Controller |
+
+---
+
+### 4. Flujo de Eventos de Dominio
+
+**Patrón Observer/Pub-Sub implementado**
+
+```
+1. Entidad registra evento
+   └─► Domain/HelloWorld/HelloWorld.py
+         └─► self.record_event(HelloWorldCreated(...))
+               └─► Shared/Domain/Entities/EntityBase.py
+                     └─► self._domain_events.append(event)
+                           │
+                           ▼
+2. Use Case obtiene eventos
+   └─► saved_entity.pull_domain_events()
+         └─► Limpia lista y retorna eventos acumulados
+               │
+               ▼
+3. EventDispatcher distribuye
+   └─► Shared/Infrastructure/Events/EventDispatcher.py
+         ├─► publish_multiple(events)
+         │     └─► Para cada evento: publish(event)
+         │
+         ├─► Busca suscriptores por nombre del evento
+         │     └─► self._subscribers[event_name]
+         │
+         └─► Llama handle() de cada suscriptor
+               ├─► Application/EventHandlers/HelloWorldCreatedLogger.py
+               │     └─► handle(event)
+               │           └─► logger.info(f"HelloWorld creado - ID: {event.id}")
+               │
+               └─► Infrastructure/Projections/HelloWorldProjection.py
+                     └─► handle(event)
+                           ├─► Si HelloWorldCreated: _on_hello_world_created()
+                           ├─► Si HelloWorldDeleted: _on_hello_world_deleted()
+                           └─► Actualiza cache/índices/read models
+```
+
+**Suscriptores de Eventos:**
+
+| Suscriptor | Archivo | Eventos Escuchados | Acción |
+|------------|---------|-------------------|--------|
+| **HelloWorldCreatedLogger** | `Application/EventHandlers/HelloWorldCreatedLogger.py` | `HelloWorldCreated` | Registra log de creación |
+| **HelloWorldDeletedLogger** | `Application/EventHandlers/HelloWorldDeletedLogger.py` | `HelloWorldDeleted` | Registra log de eliminación |
+| **HelloWorldProjection** | `Infrastructure/Projections/HelloWorldProjection.py` | `HelloWorldCreated`, `HelloWorldDeleted` | Sincroniza read models (CQRS) |
+
+**Nota importante**: El `EventDispatcher` soporta suscriptores que escuchan un único evento o múltiples eventos:
+
+```python
+# Suscriptor a un evento
+def subscribed_to(self):
+    return HelloWorldCreated
+
+# Suscriptor a múltiples eventos (ej: Projections)
+def subscribed_to(self):
+    return [HelloWorldCreated, HelloWorldDeleted]
+```
+
+---
+
+### 5. Flujo CQRS Completo (con Command Bus y Query Bus)
+
+**CQRS separa las operaciones de escritura (Commands) de las de lectura (Queries)**
+
+#### 5.1 Flujo de Command (Escritura)
+
+```
+1. Controller recibe request de escritura
+   └─► Infrastructure/Controller/HelloWorldController.py
+         │
+         ▼
+2. Crea Command (inmutable)
+   └─► Application/Commands/CreateHelloWorldCommand.py
+         ├─► @dataclass(frozen=True)
+         ├─► greeting_text: str
+         └─► Valida en __post_init__()
+               │
+               ▼
+3. Despacha Command al Bus
+   └─► command_bus.dispatch(command)
+         └─► Shared/Application/CommandBus.py
+               ├─► Busca handler registrado por tipo
+               ├─► Obtiene: self._handlers[CreateHelloWorldCommand]
+               └─► Invoca: handler.handle(command)
+                     │
+                     ▼
+4. Command Handler procesa
+   └─► Application/CommandHandlers/CreateHelloWorldHandler.py
+         ├─► Crea Value Object: Greeting.create()
+         ├─► Crea Entidad: HelloWorld.create()
+         ├─► Persiste: repository.save() (Write Repository)
+         ├─► Publica eventos: event_dispatcher.publish_multiple()
+         └─► Retorna solo ID (sin exponer dominio)
+               │
+               ▼
+5. Write Repository persiste
+   └─► Infrastructure/Repository/HelloWorldRepository.py
+         ├─► Optimizado para escritura
+         ├─► Mantiene integridad de dominio
+         └─► Ejecuta: db.session.commit()
+               │
+               ▼
+6. Projection sincroniza read models (eventual consistency)
+   └─► Infrastructure/Projections/HelloWorldProjection.py
+         ├─► Escucha: HelloWorldCreated
+         ├─► Actualiza read models
+         ├─► Puede actualizar cache (Redis)
+         └─► Puede indexar (Elasticsearch)
+```
+
+#### 5.2 Flujo de Query (Lectura)
+
+```
+1. Controller recibe request de lectura
+   └─► Infrastructure/Controller/HelloWorldController.py
+         │
+         ▼
+2. Crea Query (inmutable)
+   └─► Application/Queries/GetAllHelloWorldQuery.py
+         ├─► @dataclass(frozen=True)
+         ├─► limit: Optional[int]
+         ├─► offset: Optional[int]
+         └─► Valida parámetros de paginación
+               │
+               ▼
+3. Despacha Query al Bus
+   └─► query_bus.dispatch(query)
+         └─► Shared/Application/QueryBus.py
+               ├─► Busca handler registrado por tipo
+               ├─► Obtiene: self._handlers[GetAllHelloWorldQuery]
+               └─► Invoca: handler.handle(query)
+                     │
+                     ▼
+4. Query Handler procesa
+   └─► Application/QueryHandlers/GetAllHelloWorldHandler.py
+         ├─► NO tiene lógica de dominio
+         ├─► Solo recupera datos
+         └─► Usa: read_repository.find_all()
+               │
+               ▼
+5. Read Repository consulta (optimizado)
+   └─► Infrastructure/Repository/HelloWorldReadRepository.py
+         ├─► Query SQL optimizada para lectura
+         ├─► Puede usar índices específicos
+         ├─► Puede hacer joins optimizados
+         ├─► Convierte a: HelloWorldReadModel
+         └─► Retorna: List[HelloWorldReadModel]
+               │
+               ▼
+6. Read Model (DTO sin lógica)
+   └─► Application/ReadModels/HelloWorldReadModel.py
+         ├─► Puro DTO (Data Transfer Object)
+         ├─► Sin comportamiento de dominio
+         └─► Optimizado para serialización
+               │
+               ▼
+7. Controller serializa respuesta
+   └─► read_model.to_dict()
+         └─► Retorna JSON al cliente
+```
+
+**Diferencias clave entre Write y Read:**
+
+| Aspecto | Write (Commands) | Read (Queries) |
+|---------|-----------------|---------------|
+| **Objetivo** | Modificar estado | Solo consultar |
+| **Repositorio** | `HelloWorldRepository` (write) | `HelloWorldReadRepository` (read) |
+| **Modelo** | Entidad de dominio (`HelloWorld`) | DTO sin lógica (`HelloWorldReadModel`) |
+| **Validaciones** | Reglas de negocio complejas | Solo validaciones de parámetros |
+| **Eventos** | Publica eventos de dominio | NO publica eventos |
+| **Transacciones** | Requiere transacciones ACID | Puede usar cache/réplicas |
+| **Optimización** | Integridad de datos | Velocidad de lectura |
+
+---
+
+## 📁 Estructura del Proyecto
+
+```
+app/
+├── app.py                          # Punto de entrada Flask
+├── config/                         # Configuración de la aplicación
+│   ├── container.py               # DI Container (registra todos los componentes)
+│   ├── controllers.py             # Registro de controllers/blueprints
+│   ├── database.py                # Configuración de SQLAlchemy
+│   ├── environment.py             # Variables de entorno
+│   ├── exceptionHandler.py        # Manejo global de excepciones
+│   ├── log.py                     # Configuración de logging
+│   └── signals.py                 # Handlers de señales del sistema
+│
+├── Domain/                         # 🟢 Capa de Dominio (lógica de negocio)
+│   └── HelloWorld/
+│       ├── HelloWorld.py          # Entidad de dominio (Aggregate Root)
+│       ├── HelloWorldRepositoryInterface.py  # Puerto (interfaz)
+│       ├── Events/
+│       │   ├── HelloWorldCreated.py         # Evento de dominio
+│       │   └── HelloWorldDeleted.py         # Evento de dominio
+│       ├── Exceptions/
+│       │   └── IncorrectGreetingException.py
+│       └── ValueObjects/
+│           └── Greeting.py        # Value Object con validaciones
+│
+├── Application/                    # 🟡 Capa de Aplicación (casos de uso)
+│   ├── UseCases/                  # Use Cases (legacy, compatibilidad)
+│   │   └── HelloWorld/
+│   │       ├── CreateHelloWorldUseCase.py
+│   │       ├── GetAllHelloWorldUseCase.py
+│   │       ├── GetHelloWorldByIdUseCase.py
+│   │       └── DeleteHelloWorldUseCase.py
+│   │
+│   ├── Commands/                  # 🔵 CQRS - Commands (escritura)
+│   │   ├── CreateHelloWorldCommand.py
+│   │   ├── UpdateHelloWorldCommand.py
+│   │   └── DeleteHelloWorldCommand.py
+│   │
+│   ├── CommandHandlers/           # 🔵 CQRS - Command Handlers
+│   │   ├── CreateHelloWorldHandler.py
+│   │   ├── UpdateHelloWorldHandler.py
+│   │   └── DeleteHelloWorldHandler.py
+│   │
+│   ├── Queries/                   # 🔵 CQRS - Queries (lectura)
+│   │   ├── GetAllHelloWorldQuery.py
+│   │   ├── GetHelloWorldByIdQuery.py
+│   │   └── SearchHelloWorldQuery.py
+│   │
+│   ├── QueryHandlers/             # 🔵 CQRS - Query Handlers
+│   │   ├── GetAllHelloWorldHandler.py
+│   │   ├── GetHelloWorldByIdHandler.py
+│   │   └── SearchHelloWorldHandler.py
+│   │
+│   ├── ReadModels/                # 🔵 CQRS - Read Models (DTOs)
+│   │   ├── HelloWorldReadModel.py
+│   │   └── HelloWorldListReadModel.py
+│   │
+│   └── EventHandlers/             # Event Subscribers
+│       ├── HelloWorldCreatedLogger.py
+│       └── HelloWorldDeletedLogger.py
+│
+├── Infrastructure/                 # 🔴 Capa de Infraestructura (adaptadores)
+│   ├── Controller/
+│   │   ├── HelloWorldController.py      # REST API Controller
+│   │   └── MoviesController.py
+│   │
+│   ├── Repository/
+│   │   ├── HelloWorldRepository.py      # Write Repository (CQRS)
+│   │   ├── HelloWorldReadRepository.py  # Read Repository (CQRS)
+│   │   └── ShowsRepository.py           # API externa
+│   │
+│   ├── Projections/               # 🔵 CQRS - Event-driven sync
+│   │   └── HelloWorldProjection.py      # Sincroniza read models
+│   │
+│   └── Persistence/
+│       ├── database.py            # Instancia de SQLAlchemy
+│       ├── Mappers/
+│       │   └── HelloWorldMapper.py      # Mapeo Domain ↔ Model
+│       └── SQLAlchemy/
+│           └── HelloWorldModel.py       # Modelo de persistencia
+│
+└── Shared/                         # Componentes compartidos
+    ├── Application/
+    │   ├── CommandBus.py          # 🔵 CQRS - Command Bus
+    │   └── QueryBus.py            # 🔵 CQRS - Query Bus
+    │
+    ├── Domain/
+    │   ├── Entities/
+    │   │   └── EntityBase.py      # Base para entidades (con eventos)
+    │   ├── Events/
+    │   │   ├── DomainEvent.py     # Base para eventos
+    │   │   └── DomainEventSubscriber.py  # Interfaz suscriptor
+    │   └── ValueObjects/
+    │       └── StringValueObject.py
+    │
+    └── Infrastructure/
+        ├── Controller/
+        │   ├── Controller.py      # Base de controllers
+        │   └── SwaggerController.py  # Documentación API
+        └── Events/
+            └── EventDispatcher.py  # Pub/Sub de eventos
+```
+
+---
+
+## 📚 Documentación Adicional
+
+### Guías Disponibles
+
+- **[TESTING.md](doc/TESTING.md)** - Guía completa de testing
+  - Tests unitarios e integración
+  - Tests CQRS (Commands, Queries, Handlers, Buses)
+  - Cobertura de código
+  - Fixtures y mejores prácticas
+
+- **[SWAGGER.md](doc/SWAGGER.md)** - Documentación de API
+  - Configuración de Swagger UI
+  - Documentación OpenAPI 3.0.3
+  - Endpoints disponibles
+  - Ejemplos de uso
+
+### Conceptos Clave
+
+#### Hexagonal Architecture (Puertos y Adaptadores)
+
+- **Dominio** (núcleo): Lógica de negocio pura, sin dependencias externas
+- **Puertos**: Interfaces que definen contratos (ej: `HelloWorldRepositoryInterface`)
+- **Adaptadores**: Implementaciones concretas (ej: `HelloWorldRepository` con SQLAlchemy)
+
+#### CQRS (Command Query Responsibility Segregation)
+
+- **Commands**: Modifican estado (Create, Update, Delete)
+  - Pasan por validaciones de dominio
+  - Publican eventos de dominio
+  - Usan Write Repository
+  
+- **Queries**: Solo leen datos (Get, Search)
+  - Sin lógica de negocio
+  - Optimizadas para lectura
+  - Usan Read Repository
+  - Retornan DTOs (Read Models)
+
+#### Event-Driven Architecture
+
+- **Domain Events**: Hechos que ocurrieron en el dominio
+- **EventDispatcher**: Patrón Observer/Pub-Sub
+- **Event Handlers**: Reaccionan a eventos (logging, notificaciones, etc.)
+- **Projections**: Sincronizan read models (eventual consistency)
+
+#### Dependency Injection
+
+- **Container**: `config/container.py` gestiona todas las dependencias
+- **Providers**: Factory, Singleton patterns
+- **Registro automático**: Handlers se registran en buses al iniciar
+
+---
+
+## 🚀 Comandos Útiles
+
+```bash
+# Ejecutar aplicación
+python app/app.py
+
+# Ejecutar tests
+pytest
+
+# Tests con cobertura
+pytest --cov=app --cov-report=html
+
+# Tests específicos CQRS
+pytest tests/unit/Application/ tests/unit/Shared/ -v
+
+# Ver documentación API
+# Abrir en navegador: http://localhost:5000/api/docs
+```
+
+---
+
+## 🎯 Beneficios de esta Arquitectura
+
+1. **Separación de Responsabilidades**: Cada capa tiene un propósito claro
+2. **Testabilidad**: Fácil hacer tests unitarios con mocks
+3. **Mantenibilidad**: Cambios en infraestructura no afectan dominio
+4. **Escalabilidad**: Read y Write pueden escalar independientemente
+5. **Flexibilidad**: Fácil cambiar base de datos o agregar cache
+6. **Auditabilidad**: Domain Events registran todos los cambios
+7. **Eventual Consistency**: Projections sincronizan modelos de lectura
+
+---
+
+**Proyecto desarrollado con ❤️ siguiendo principios de Clean Architecture y DDD**

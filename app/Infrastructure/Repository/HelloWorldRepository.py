@@ -8,8 +8,9 @@ from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
 
 class HelloWorldRepository(HelloWorldRepositoryInterface):
     """
-    Implementación del repositorio de HelloWorld usando SQLAlchemy.
-    Esta clase pertenece a la capa de Infrastructure.
+    Repositorio de escritura (Write Repository) para HelloWorld.
+    En CQRS, este repositorio se enfoca en operaciones de escritura (CUD).
+    Las operaciones de lectura están en HelloWorldReadRepository.
     """
 
     def save(self, hello_world: HelloWorld) -> HelloWorld:

@@ -21,20 +21,27 @@ class EventDispatcher:
     
     def subscribe(self, subscriber: DomainEventSubscriber) -> None:
         """
-        Registra un suscriptor para un tipo de evento específico.
+        Registra un suscriptor para uno o más tipos de evento.
+        
+        Soporta suscriptores que escuchan un solo evento o múltiples eventos.
         
         Args:
             subscriber: El suscriptor a registrar
         """
-        event_class = subscriber.subscribed_to()
-        event_name = event_class.__name__
+        subscribed_to = subscriber.subscribed_to()
         
-        if event_name not in self._subscribers:
-            self._subscribers[event_name] = []
+        # Soportar tanto una clase única como una lista de clases
+        event_classes = subscribed_to if isinstance(subscribed_to, list) else [subscribed_to]
         
-        # Evitar duplicados
-        if subscriber not in self._subscribers[event_name]:
-            self._subscribers[event_name].append(subscriber)
+        for event_class in event_classes:
+            event_name = event_class.__name__
+            
+            if event_name not in self._subscribers:
+                self._subscribers[event_name] = []
+            
+            # Evitar duplicados
+            if subscriber not in self._subscribers[event_name]:
+                self._subscribers[event_name].append(subscriber)
     
     def publish(self, event: DomainEvent) -> None:
         """
