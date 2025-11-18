@@ -20,13 +20,13 @@ El proyecto implementa una arquitectura en capas siguiendo los principios de Cle
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                   Infrastructure Layer                       │
+│                   Infrastructure Layer                      │
 │  (Controllers, Repositories, API Clients, Event Handlers)   │
 ├─────────────────────────────────────────────────────────────┤
-│                    Application Layer                         │
+│                    Application Layer                        │
 │      (Use Cases, Commands, Queries, Handlers, Buses)        │
 ├─────────────────────────────────────────────────────────────┤
-│                      Domain Layer                            │
+│                      Domain Layer                           │
 │    (Entities, Value Objects, Domain Events, Interfaces)     │
 └─────────────────────────────────────────────────────────────┘
 ```
