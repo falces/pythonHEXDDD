@@ -184,6 +184,8 @@ app.py (Flask App)
 
 **Endpoint**: `GET /api/v1/hello-world/`
 
+**⚠️ CQRS Puro implementado**: Este flujo usa QueryBus en lugar del write repository.
+
 ```
 1. Cliente HTTP (GET /api/v1/hello-world/)
          │
@@ -198,15 +200,26 @@ app.py (Flask App)
                ▼
 3. Application/UseCases/HelloWorld/GetAllHelloWorldUseCase.py
    └─► execute()
-         ├─► Consulta repositorio
-         │     └─► repository.findAll()
-         │           └─► Infrastructure/Repository/HelloWorldRepository.py
-         │                 ├─► Ejecuta: db.session.query(HelloWorldModel).all()
-         │                 ├─► Mapea a dominio: HelloWorldMapper.toDomain()
-         │                 └─► Retorna: List[HelloWorld]
+         ├─► Crea Query
+         │     └─► GetAllHelloWorldQuery()
          │
-         └─► Serializa lista
-               └─► [HelloWorldMapper.toDict(hw) for hw in lista]
+         ├─► Despacha al Query Bus
+         │     └─► query_bus.dispatch(query)
+         │           └─► Shared/Application/QueryBus.py
+         │                 ├─► Busca handler: GetAllHelloWorldHandler
+         │                 └─► Invoca: handler.handle(query)
+         │
+         ├─► Query Handler procesa
+         │     └─► Application/QueryHandlers/GetAllHelloWorldHandler.py
+         │           └─► Usa Read Repository (optimizado para lectura)
+         │                 └─► read_repository.find_all()
+         │                       └─► Infrastructure/Repository/HelloWorldReadRepository.py
+         │                             ├─► Query SQL optimizada
+         │                             ├─► Convierte a ReadModel
+         │                             └─► Retorna: HelloWorldListReadModel
+         │
+         └─► Serializa lista desde ReadModel
+               └─► [item.to_dict() for item in result.items]
                      └─► Retorna: [{"id": 1, "greeting": "..."}, ...]
                            │
                            ▼
@@ -220,9 +233,11 @@ app.py (Flask App)
 | # | Archivo | Responsabilidad | Siguiente paso |
 |---|---------|-----------------|----------------|
 | 1 | `Infrastructure/Controller/HelloWorldController.py` | Recibe HTTP request | Use Case |
-| 2 | `Application/UseCases/HelloWorld/GetAllHelloWorldUseCase.py` | Orquesta la consulta | Repositorio |
-| 3 | `Infrastructure/Repository/HelloWorldRepository.py` | Consulta base de datos | Mapper |
-| 4 | `Infrastructure/Persistence/Mappers/HelloWorldMapper.py` | Convierte modelos a dominio y DTO | Controller |
+| 2 | `Application/UseCases/HelloWorld/GetAllHelloWorldUseCase.py` | Crea Query y usa QueryBus | QueryBus |
+| 3 | `Shared/Application/QueryBus.py` | Despacha query al handler correcto | Query Handler |
+| 4 | `Application/QueryHandlers/GetAllHelloWorldHandler.py` | Ejecuta query sin lógica de dominio | Read Repository |
+| 5 | `Infrastructure/Repository/HelloWorldReadRepository.py` | Consulta optimizada para lectura | ReadModel |
+| 6 | `Application/ReadModels/HelloWorldListReadModel.py` | DTO para respuesta paginada | Controller |
 
 ---
 
@@ -291,6 +306,8 @@ def subscribed_to(self):
 
 #### 5.1 Flujo de Command (Escritura)
 
+**⚠️ CQRS Puro**: Los Command Handlers usan **solo Write Repository** para persistir y **Read Repository** para validaciones.
+
 ```
 1. Controller recibe request de escritura
    └─► Infrastructure/Controller/HelloWorldController.py
@@ -311,28 +328,53 @@ def subscribed_to(self):
                └─► Invoca: handler.handle(command)
                      │
                      ▼
-4. Command Handler procesa
-   └─► Application/CommandHandlers/CreateHelloWorldHandler.py
+4. Command Handler procesa (ej: Update/Delete)
+   └─► Application/CommandHandlers/UpdateHelloWorldHandler.py
+         ├─► Valida existencia con Read Repository
+         │     └─► read_repository.findById(id)  ⬅️ CQRS Puro
+         │           └─► Solo para validación, NO para modificar
+         │
          ├─► Crea Value Object: Greeting.create()
-         ├─► Crea Entidad: HelloWorld.create()
-         ├─► Persiste: repository.save() (Write Repository)
+         ├─► Modifica Entidad: hello_world.greeting = new_greeting
+         ├─► Persiste con Write Repository
+         │     └─► repository.save(hello_world)  ⬅️ CQRS Puro
+         │           └─► Infrastructure/Repository/HelloWorldRepository.py
+         │                 ├─► Solo métodos: save() y delete()
+         │                 ├─► NO tiene findById() ni findAll()
+         │                 └─► Optimizado SOLO para escritura
+         │
          ├─► Publica eventos: event_dispatcher.publish_multiple()
-         └─► Retorna solo ID (sin exponer dominio)
+         └─► Retorna resultado (ID o booleano)
                │
                ▼
-5. Write Repository persiste
+5. Write Repository persiste (SOLO escritura)
    └─► Infrastructure/Repository/HelloWorldRepository.py
-         ├─► Optimizado para escritura
+         ├─► Métodos disponibles: save(), delete()
+         ├─► Métodos ELIMINADOS: findById(), findAll() ⬅️ CQRS Puro
          ├─► Mantiene integridad de dominio
          └─► Ejecuta: db.session.commit()
                │
                ▼
 6. Projection sincroniza read models (eventual consistency)
    └─► Infrastructure/Projections/HelloWorldProjection.py
-         ├─► Escucha: HelloWorldCreated
-         ├─► Actualiza read models
+         ├─► Escucha: HelloWorldCreated, HelloWorldDeleted
+         ├─► Actualiza read models en Read Repository
          ├─► Puede actualizar cache (Redis)
          └─► Puede indexar (Elasticsearch)
+```
+
+**✅ Separación CQRS Pura en Command Handlers:**
+
+```python
+# UpdateHelloWorldHandler recibe AMBOS repositorios
+def __init__(
+    self,
+    repository: HelloWorldRepositoryInterface,      # Write Repository
+    read_repository: HelloWorldReadRepository,     # Read Repository
+    event_dispatcher: EventDispatcher
+):
+    self.repository = repository           # Para save()
+    self.read_repository = read_repository # Para validaciones (findById)
 ```
 
 #### 5.2 Flujo de Query (Lectura)
@@ -391,12 +433,34 @@ def subscribed_to(self):
 | Aspecto | Write (Commands) | Read (Queries) |
 |---------|-----------------|---------------|
 | **Objetivo** | Modificar estado | Solo consultar |
-| **Repositorio** | `HelloWorldRepository` (write) | `HelloWorldReadRepository` (read) |
+| **Repositorio** | `HelloWorldRepository` (write) ⬅️ **SOLO save() y delete()** | `HelloWorldReadRepository` (read) |
 | **Modelo** | Entidad de dominio (`HelloWorld`) | DTO sin lógica (`HelloWorldReadModel`) |
 | **Validaciones** | Reglas de negocio complejas | Solo validaciones de parámetros |
 | **Eventos** | Publica eventos de dominio | NO publica eventos |
 | **Transacciones** | Requiere transacciones ACID | Puede usar cache/réplicas |
 | **Optimización** | Integridad de datos | Velocidad de lectura |
+| **Separación CQRS Pura** | ✅ Write Repository sin métodos de lectura | ✅ Read Repository solo para queries |
+| **Validaciones en Handlers** | Usa Read Repository para verificar existencia | N/A |
+
+**✅ Implementación CQRS Pura:**
+
+El proyecto implementa **CQRS Puro** con separación estricta:
+
+- **Write Repository** (`HelloWorldRepository`):
+  - ✅ Métodos: `save()`, `delete()`
+  - ❌ Eliminados: `findById()`, `findAll()`
+  - Solo para operaciones de escritura (CUD)
+
+- **Read Repository** (`HelloWorldReadRepository`):
+  - ✅ Métodos: `findById()`, `find_all()`, `search()`
+  - Solo para operaciones de lectura
+  - Optimizado con índices y queries específicas
+
+- **Command Handlers** (UpdateHelloWorldHandler, DeleteHelloWorldHandler):
+  - Inyectan **ambos repositorios**:
+    - `repository` (write) para persistir
+    - `read_repository` (read) para validaciones
+  - Mantienen separación: lecturas usan read, escrituras usan write
 
 ---
 
@@ -468,8 +532,10 @@ app/
 │   │   └── MoviesController.py
 │   │
 │   ├── Repository/
-│   │   ├── HelloWorldRepository.py      # Write Repository (CQRS)
-│   │   ├── HelloWorldReadRepository.py  # Read Repository (CQRS)
+│   │   ├── HelloWorldRepository.py      # ✅ Write Repository (CQRS Puro)
+│   │   │                                 # Solo: save(), delete()
+│   │   ├── HelloWorldReadRepository.py  # ✅ Read Repository (CQRS Puro)
+│   │   │                                 # Solo: findById(), find_all(), search()
 │   │   └── ShowsRepository.py           # API externa
 │   │
 │   ├── Projections/               # 🔵 CQRS - Event-driven sync
@@ -530,24 +596,73 @@ app/
 - **Puertos**: Interfaces que definen contratos (ej: `HelloWorldRepositoryInterface`)
 - **Adaptadores**: Implementaciones concretas (ej: `HelloWorldRepository` con SQLAlchemy)
 
-#### CQRS (Command Query Responsibility Segregation)
+#### CQRS (Command Query Responsibility Segregation) - **Implementación Pura** ✅
+
+El proyecto implementa **CQRS Puro** con separación estricta entre operaciones de escritura y lectura:
 
 - **Commands**: Modifican estado (Create, Update, Delete)
   - Pasan por validaciones de dominio
   - Publican eventos de dominio
-  - Usan Write Repository
+  - Usan **Write Repository** (solo `save()` y `delete()`)
+  - **Validaciones** usan **Read Repository** para verificar existencia
+  - Inyectan ambos repositorios cuando necesitan leer para validar
   
 - **Queries**: Solo leen datos (Get, Search)
   - Sin lógica de negocio
   - Optimizadas para lectura
-  - Usan Read Repository
+  - Usan **Read Repository** (solo métodos de consulta)
   - Retornan DTOs (Read Models)
+
+**Separación en Repositorios:**
+
+```python
+# Write Repository - SOLO escritura
+class HelloWorldRepository:
+    def save(self, entity): ...    # ✅ Persistir
+    def delete(self, id): ...       # ✅ Eliminar
+    # ❌ NO tiene findById() ni findAll()
+
+# Read Repository - SOLO lectura  
+class HelloWorldReadRepository:
+    def findById(self, id): ...     # ✅ Buscar por ID
+    def find_all(...): ...          # ✅ Listar todos
+    def search(...): ...            # ✅ Buscar con filtros
+    # ❌ NO tiene save() ni delete()
+```
+
+**Validaciones en Command Handlers:**
+
+```python
+# UpdateHelloWorldHandler - Usa ambos repositorios
+class UpdateHelloWorldHandler:
+    def __init__(self, repository, read_repository, event_dispatcher):
+        self.repository = repository              # Write Repository
+        self.read_repository = read_repository    # Read Repository
+    
+    def handle(self, command):
+        # 1. Validar existencia con Read Repository
+        entity = self.read_repository.findById(command.id)  # ✅ Lectura
+        
+        # 2. Modificar entidad (dominio)
+        entity.greeting = new_greeting
+        
+        # 3. Persistir con Write Repository
+        self.repository.save(entity)  # ✅ Escritura
+```
+
+**Beneficios de CQRS Puro:**
+- ✅ Separación clara de responsabilidades
+- ✅ Optimización independiente (write vs read)
+- ✅ Escalabilidad: diferentes bases de datos para lectura/escritura
+- ✅ Mantenibilidad: cambios en escritura no afectan lectura
+- ✅ Consistencia eventual con Projections
 
 #### Event-Driven Architecture
 
 - **Domain Events**: Hechos que ocurrieron en el dominio
 - **EventDispatcher**: Patrón Observer/Pub-Sub
 - **Event Handlers**: Reaccionan a eventos (logging, notificaciones, etc.)
+- **Projections**: Sincronización de read models (CQRS)
 - **Projections**: Sincronizan read models (eventual consistency)
 
 #### Dependency Injection

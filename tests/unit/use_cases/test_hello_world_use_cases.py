@@ -6,6 +6,8 @@ import pytest
 from unittest.mock import Mock, call
 from Application.UseCases.HelloWorld.CreateHelloWorldUseCase import CreateHelloWorldUseCase
 from Application.UseCases.HelloWorld.GetAllHelloWorldUseCase import GetAllHelloWorldUseCase
+from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
+from Application.ReadModels.HelloWorldListReadModel import HelloWorldListReadModel
 from Application.UseCases.HelloWorld.GetHelloWorldByIdUseCase import GetHelloWorldByIdUseCase
 from Application.UseCases.HelloWorld.DeleteHelloWorldUseCase import DeleteHelloWorldUseCase
 from Domain.HelloWorld.HelloWorld import HelloWorld
@@ -69,30 +71,41 @@ class TestCreateHelloWorldUseCase:
 class TestGetAllHelloWorldUseCase:
     """Tests para GetAllHelloWorldUseCase."""
     
-    def test_get_all_returns_empty_list_when_no_data(self, mock_repository):
+    def test_get_all_returns_empty_list_when_no_data(self):
         """Debería retornar lista vacía si no hay datos."""
         # Arrange
-        mock_repository.findAll.return_value = []
-        use_case = GetAllHelloWorldUseCase(mock_repository)
+        mock_query_bus = Mock()
+        result_model = HelloWorldListReadModel(items=[], total=0, limit=10, offset=0)
+        mock_query_bus.dispatch = Mock(return_value=result_model)
+        
+        use_case = GetAllHelloWorldUseCase(mock_query_bus)
         
         # Act
         result = use_case.execute()
         
         # Assert
         assert result == []
-        mock_repository.findAll.assert_called_once()
+        mock_query_bus.dispatch.assert_called_once()
     
-    def test_get_all_returns_list_of_hello_worlds(self, mock_repository):
+    def test_get_all_returns_list_of_hello_worlds(self):
         """Debería retornar lista de HelloWorlds."""
         # Arrange
-        greeting1 = Greeting.create("Hello 1")
-        greeting2 = Greeting.create("Hello 2")
+        from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
         
-        entity1 = HelloWorld(greeting=greeting1, id=1)
-        entity2 = HelloWorld(greeting=greeting2, id=2)
+        mock_query_bus = Mock()
+        items = [
+            HelloWorldReadModel(id=1, greeting='Hello 1'),
+            HelloWorldReadModel(id=2, greeting='Hello 2')
+        ]
+        result_model = HelloWorldListReadModel(
+            items=items,
+            total=2,
+            limit=10,
+            offset=0
+        )
+        mock_query_bus.dispatch = Mock(return_value=result_model)
         
-        mock_repository.findAll.return_value = [entity1, entity2]
-        use_case = GetAllHelloWorldUseCase(mock_repository)
+        use_case = GetAllHelloWorldUseCase(mock_query_bus)
         
         # Act
         result = use_case.execute()

@@ -1,23 +1,23 @@
 """
-Tests de integración para HelloWorldRepository.
+Tests de integración para HelloWorldWriteRepository.
 Usan base de datos SQLite en memoria.
 """
 
 import pytest
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.Greeting import Greeting
-from Infrastructure.Repository.HelloWorldRepository import HelloWorldRepository
+from Infrastructure.Repository.HelloWorldWriteRepository import HelloWorldWriteRepository
 
 
 @pytest.mark.integration
 class TestHelloWorldRepositoryIntegration:
-    """Tests de integración para HelloWorldRepository."""
+    """Tests de integración para HelloWorldWriteRepository."""
     
     def test_save_and_find_by_id(self, app, db_session):
         """Debería guardar y recuperar por ID."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             greeting = Greeting.create("Integration Test")
             entity = HelloWorld(greeting=greeting)
             
@@ -37,7 +37,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería retornar todas las entidades."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             
             greeting1 = Greeting.create("First")
             greeting2 = Greeting.create("Second")
@@ -62,7 +62,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería eliminar entidad correctamente."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             greeting = Greeting.create("To Delete")
             entity = HelloWorld(greeting=greeting)
             
@@ -83,7 +83,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería retornar False al eliminar entidad inexistente."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             
             # Act
             result = repository.delete(999999)
@@ -95,7 +95,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería retornar None para ID inexistente."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             
             # Act
             found = repository.findById(888888)
@@ -107,7 +107,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería actualizar entidad existente."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             greeting = Greeting.create("Original")
             entity = HelloWorld(greeting=greeting)
             
@@ -129,7 +129,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería manejar múltiples guardados en una transacción."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             entities = []
             
             # Act - Guardar múltiples entidades
@@ -150,7 +150,7 @@ class TestHelloWorldRepositoryIntegration:
         """Debería hacer rollback en caso de error."""
         # Arrange
         with app.app_context():
-            repository = HelloWorldRepository()
+            repository = HelloWorldWriteRepository()
             greeting = Greeting.create("Rollback Test")
             entity = HelloWorld(greeting=greeting)
             

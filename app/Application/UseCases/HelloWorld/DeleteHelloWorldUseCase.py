@@ -29,7 +29,7 @@ class DeleteHelloWorldUseCase:
             bool: True si se eliminó correctamente, False si no existía
         """
         # Primero verificar si existe (opcional, pero útil para el evento)
-        entity = self.repository.findById(hello_world_id)
+        entity = self.repository.delete(hello_world_id)
         
         if not entity:
             return False

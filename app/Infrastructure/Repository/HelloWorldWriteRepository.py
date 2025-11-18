@@ -6,11 +6,11 @@ from Infrastructure.Persistence.SQLAlchemy.HelloWorldModel import HelloWorldMode
 from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
 
 
-class HelloWorldRepository(HelloWorldRepositoryInterface):
+class HelloWorldWriteRepository(HelloWorldRepositoryInterface):
     """
     Repositorio de escritura (Write Repository) para HelloWorld.
-    En CQRS, este repositorio se enfoca en operaciones de escritura (CUD).
-    Las operaciones de lectura están en HelloWorldReadRepository.
+    En CQRS puro, este repositorio SOLO maneja operaciones de escritura (CUD).
+    Para operaciones de lectura, usar HelloWorldReadRepository.
     """
 
     def save(self, hello_world: HelloWorld) -> HelloWorld:
@@ -25,25 +25,6 @@ class HelloWorldRepository(HelloWorldRepositoryInterface):
         
         # Retornar la entidad con el ID asignado
         return HelloWorldMapper.toDomain(model)
-
-    def findById(self, id: int) -> Optional[HelloWorld]:
-        """
-        Busca una entidad HelloWorld por su ID.
-        """
-        model = db.session.query(HelloWorldModel).filter_by(id=id).first()
-        
-        if model is None:
-            return None
-            
-        return HelloWorldMapper.toDomain(model)
-
-    def findAll(self) -> List[HelloWorld]:
-        """
-        Obtiene todas las entidades HelloWorld.
-        """
-        models = db.session.query(HelloWorldModel).all()
-        
-        return [HelloWorldMapper.toDomain(model) for model in models]
 
     def delete(self, id: int) -> bool:
         """

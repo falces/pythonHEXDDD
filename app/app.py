@@ -14,10 +14,7 @@ configureLogs(app)
 signals = configureSignals(app)
 configureEnvironment(app)
 db = configureDatabase(app)
-
-# Inicializar el DI Container
 app.container = init_container(app)
-
 exceptionHandler(app)
 configureControllers(app)
 

@@ -27,7 +27,7 @@ class GetHelloWorldByIdUseCase:
             dict: HelloWorld encontrado o None si no existe
         """
         # Buscar entidad por ID
-        hello_world = self.repository.findById(hello_world_id)
+        hello_world = self.repository.find_by_id(hello_world_id)
         
         if hello_world is None:
             return None

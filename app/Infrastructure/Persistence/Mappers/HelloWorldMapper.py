@@ -44,7 +44,7 @@ class HelloWorldMapper:
             return None
             
         return HelloWorldModel(
-            greeting=entity.greeting.getValue(),
+            greeting=entity.greeting.value,
             id=getattr(entity, '_id', None)
         )
 
@@ -59,7 +59,10 @@ class HelloWorldMapper:
         Returns:
             dict: Representación en diccionario
         """
+        # Manejar tanto Value Objects como strings directos
+        greeting_value = entity.greeting.value if hasattr(entity.greeting, 'value') else entity.greeting
+        
         return {
             "id": getattr(entity, '_id', None),
-            "greeting": entity.greeting.getValue(),
+            "greeting": greeting_value,
         }

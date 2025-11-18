@@ -45,7 +45,10 @@ class CreateHelloWorldHandler:
         # 3. Persistir a través del repositorio
         saved_entity = self.repository.save(hello_world)
         
-        # 4. Publicar eventos de dominio
+        # 4. Marcar como creado para registrar el evento (ahora que tenemos el ID)
+        saved_entity.mark_as_created(saved_entity.id)
+        
+        # 5. Publicar eventos de dominio
         self.event_dispatcher.publish_multiple(saved_entity.pull_domain_events())
         
         # 5. Retornar solo el ID (sin exponer el modelo de dominio)

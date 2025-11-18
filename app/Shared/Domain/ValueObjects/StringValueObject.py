@@ -4,6 +4,3 @@ class StringValueObject():
         value:str
     ):
         self.value = value
-    
-    def getValue(self) -> str:
-        return self.value

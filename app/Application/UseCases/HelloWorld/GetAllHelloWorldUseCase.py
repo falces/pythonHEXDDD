@@ -1,19 +1,24 @@
 from typing import List
-from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
+from Shared.Application.QueryBus import QueryBus
+from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
 
 
 class GetAllHelloWorldUseCase:
     """
     Caso de Uso para obtener todas las entidades HelloWorld.
-    Su única responsabilidad es consultar y serializar la lista.
+    Migrado a CQRS puro: usa QueryBus en lugar del write repository.
     """
 
-    def __init__(self, repository: HelloWorldRepositoryInterface):
-        self.repository = repository
+    def __init__(self, query_bus: QueryBus):
+        self.query_bus = query_bus
 
     def execute(self) -> List[dict]:
-        # 1. Obtener todas las entidades desde el repositorio
-        entities = self.repository.findAll()
-        # 2. Serializar cada entidad a un diccionario
-        return [HelloWorldMapper.toDict(e) for e in entities]
+        # 1. Crear query
+        query = GetAllHelloWorldQuery()
+        
+        # 2. Ejecutar query a través del QueryBus
+        result = self.query_bus.dispatch(query)
+        
+        # 3. Retornar lista serializada desde los read models
+        # result es List[HelloWorldReadModel]
+        return [item.to_dict() for item in result]

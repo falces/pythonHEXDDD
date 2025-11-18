@@ -26,13 +26,13 @@ class Show(AggregateRootBase):
         self.streaming_option = streaming_option
     
     def getId(self) -> str:
-        return self.show_id.getValue()
+        return self.show_id.value
     
     def getTitle(self) -> str:
-        return self.title.getValue()
+        return self.title.value
     
     def getType(self) -> str:
-        return self.show_type.getValue()
+        return self.show_type.value
     
     def getStreamingOption(self) -> Optional[StreamingOption]:
         return self.streaming_option

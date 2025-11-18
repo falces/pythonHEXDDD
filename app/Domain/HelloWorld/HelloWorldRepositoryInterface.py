@@ -23,29 +23,6 @@ class HelloWorldRepositoryInterface(ABC):
         pass
 
     @abstractmethod
-    def findById(self, id: int) -> Optional[HelloWorld]:
-        """
-        Busca una entidad por su ID.
-        
-        Args:
-            id: Identificador de la entidad
-            
-        Returns:
-            HelloWorld o None si no existe
-        """
-        pass
-
-    @abstractmethod
-    def findAll(self) -> List[HelloWorld]:
-        """
-        Obtiene todas las entidades HelloWorld.
-        
-        Returns:
-            Lista de entidades HelloWorld
-        """
-        pass
-
-    @abstractmethod
     def delete(self, id: int) -> bool:
         """
         Elimina una entidad por su ID.

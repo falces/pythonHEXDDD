@@ -7,7 +7,7 @@ from Infrastructure.ExternalAPI.Mappers.ShowMapper import ShowMapper
 from Shared.Infrastructure.APITools import APITools
 
 
-class ShowsRepository(ShowRepositoryInterface):
+class ShowsAPIRepository(ShowRepositoryInterface):
     """
     Implementación del repositorio de Show que consulta la API externa Stream Availability.
     Esta clase pertenece a la capa de Infrastructure y traduce respuestas de API 

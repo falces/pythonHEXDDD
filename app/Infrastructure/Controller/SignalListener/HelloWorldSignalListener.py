@@ -1,6 +1,6 @@
 from config.signals import signals
 from flask import Blueprint
-from Infrastructure.Repository.HelloWorldRepository import HelloWorldRepository
+from Infrastructure.Repository.HelloWorldWriteRepository import HelloWorldWriteRepository
 from Application.HelloWorldService import HelloWorldService
 from Application.DTO.GreetingDTO import GreetingDTO
 
@@ -23,6 +23,6 @@ class HelloWorldSignalListener():
         )
 
         # Instanciar el repositorio y pasarlo al servicio
-        repository = HelloWorldRepository()
+        repository = HelloWorldWriteRepository()
         statusService = HelloWorldService(repository)
         statusService.addHelloWorld(countryDTO)

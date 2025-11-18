@@ -5,10 +5,9 @@ Incluye soporte completo para CQRS con Command Bus y Query Bus.
 """
 
 from dependency_injector import containers, providers
-from Infrastructure.Repository.HelloWorldRepository import HelloWorldRepository
+from Infrastructure.Repository.HelloWorldWriteRepository import HelloWorldWriteRepository
 from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
-from Infrastructure.Repository.ShowsRepository import ShowsRepository
-from Application.HelloWorldService import HelloWorldService
+from Infrastructure.Repository.ShowsAPIRepository import ShowsAPIRepository
 from Application.MoviesService import MoviesService
 
 # CQRS - Command Bus y Query Bus
@@ -83,7 +82,7 @@ class Container(containers.DeclarativeContainer):
     
     # Write Repository (para comandos)
     hello_world_write_repository = providers.Factory(
-        HelloWorldRepository
+        HelloWorldWriteRepository
     )
     
     # Read Repository (para queries)
@@ -93,7 +92,7 @@ class Container(containers.DeclarativeContainer):
     
     # Shows Repository (API Externa)
     shows_repository = providers.Factory(
-        ShowsRepository,
+        ShowsAPIRepository,
         api_host=config.stream_availability_host,
         api_key=config.stream_availability_key
     )
@@ -109,12 +108,14 @@ class Container(containers.DeclarativeContainer):
     update_hello_world_handler = providers.Factory(
         UpdateHelloWorldHandler,
         repository=hello_world_write_repository,
+        read_repository=hello_world_read_repository,
         event_dispatcher=event_dispatcher
     )
     
     delete_hello_world_handler = providers.Factory(
         DeleteHelloWorldHandler,
         repository=hello_world_write_repository,
+        read_repository=hello_world_read_repository,
         event_dispatcher=event_dispatcher
     )
     
@@ -170,12 +171,12 @@ class Container(containers.DeclarativeContainer):
     
     get_all_hello_world_use_case = providers.Factory(
         GetAllHelloWorldUseCase,
-        repository=hello_world_write_repository
+        query_bus=query_bus
     )
     
     get_hello_world_by_id_use_case = providers.Factory(
         GetHelloWorldByIdUseCase,
-        repository=hello_world_write_repository
+        repository=hello_world_read_repository
     )
     
     delete_hello_world_use_case = providers.Factory(
