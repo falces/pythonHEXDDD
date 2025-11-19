@@ -40,7 +40,7 @@ class UpdateHelloWorldHandler:
             IncorrectGreetingException: Si el greeting es inválido
         """
         # 1. Buscar entidad existente usando read repository (CQRS puro)
-        hello_world = self.read_repository.findById(command.id)
+        hello_world = self.read_repository.find_by_id(command.id)
         
         if hello_world is None:
             raise ValueError(f"HelloWorld with id {command.id} not found")

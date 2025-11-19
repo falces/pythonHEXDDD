@@ -36,7 +36,7 @@ class DeleteHelloWorldHandler:
             bool: True si se eliminó correctamente, False si no existía
         """
         # 1. Verificar que existe usando read repository (CQRS puro)
-        hello_world = self.read_repository.findById(command.id)
+        hello_world = self.read_repository.find_by_id(command.id)
         
         if hello_world is None:
             return False

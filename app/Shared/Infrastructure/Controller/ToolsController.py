@@ -1,7 +1,7 @@
 from flask import Blueprint, url_for
 from flask import current_app
 
-toolsController = Blueprint('toolsController', __name__)
+tools_controller = Blueprint('toolsController', __name__)
 
 def has_no_empty_params(rule):
     defaults = rule.defaults if rule.defaults is not None else ()
@@ -9,7 +9,7 @@ def has_no_empty_params(rule):
 
     return len(defaults) >= len(arguments)
 
-@toolsController.route("/site-map")
+@tools_controller.route("/site-map")
 def site_map_route():
     """Generate a site map of all routes in the application.
     Returns:

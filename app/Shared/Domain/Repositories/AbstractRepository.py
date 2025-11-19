@@ -9,13 +9,13 @@ class AbstractRepository(ABC):
         pass
 
     @abstractmethod
-    def findById(self):
+    def find_by_id(self):
         pass
 
     @abstractmethod
-    def findAll(self):
+    def find_all(self):
         pass
     
     @abstractmethod
-    def findByCriteria(self):
+    def find_by_criteria(self):
         pass

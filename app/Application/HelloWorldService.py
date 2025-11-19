@@ -26,7 +26,7 @@ class HelloWorldService:
         """
         Obtiene todos los HelloWorld y los serializa a diccionarios.
         """
-        all_hello_world = self.repository.findAll()
+        all_hello_world = self.repository.find_all()
 
         # Usar el serializer para convertir entidades a diccionarios
         hello_world_list = []

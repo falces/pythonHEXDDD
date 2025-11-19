@@ -1,7 +1,7 @@
 class ControllerBase():
 
     @staticmethod
-    def formatResponse(
+    def format_response(
         data: list,
         code: int,
     ) -> list:

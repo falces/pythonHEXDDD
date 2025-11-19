@@ -32,7 +32,7 @@ class GetShowByIdUseCase:
             return None
         
         # Buscar el show en el repositorio
-        show = self.repository.findById(show_id)
+        show = self.repository.find_by_id(show_id)
         
         if show is None:
             return None

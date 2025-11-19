@@ -1,7 +1,7 @@
 from Shared.Domain.ValueObjects.IntValueObject import IntValueObject
 from Shared.Domain.Exceptions.IncorrectValueException import IncorrectValueException
 
-class IdValueobject(IntValueObject):
+class IdValueObject(IntValueObject):
     def __init__(
         self,
         value: int,

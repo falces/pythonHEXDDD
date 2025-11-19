@@ -3,7 +3,7 @@ from Infrastructure.Controller.ControllerBase import ControllerBase
 from Domain.HelloWorld.Exceptions.IncorrectGreetingException import IncorrectGreetingException
 
 
-helloWorldController = Blueprint('helloWorldController', __name__)
+hello_world_controller = Blueprint('helloWorldController', __name__)
 
 
 class HelloWorldController:
@@ -12,8 +12,8 @@ class HelloWorldController:
     Usa el DI Container para obtener casos de uso.
     """
 
-    @helloWorldController.route('/', methods=['GET'])
-    def getAllHelloWorld():
+    @hello_world_controller.route('/', methods=['GET'])
+    def get_all_hello_world():
         """
         Obtiene todos los HelloWorld registrados.
         
@@ -25,10 +25,10 @@ class HelloWorldController:
         # Ejecutar el caso de uso
         result = use_case.execute()
         
-        return ControllerBase.formatResponse(result, 200)
+        return ControllerBase.format_response(result, 200)
 
-    @helloWorldController.route('/', methods=['POST'])
-    def createHelloWorld():
+    @hello_world_controller.route('/', methods=['POST'])
+    def create_hello_world():
         """
         Crea un nuevo HelloWorld.
         
@@ -42,7 +42,7 @@ class HelloWorldController:
             data = request.get_json()
             
             if not data or 'name' not in data:
-                return ControllerBase.formatResponse(
+                return ControllerBase.format_response(
                     {"error": "Field 'name' is required"},
                     400
                 )
@@ -53,19 +53,19 @@ class HelloWorldController:
             # Ejecutar caso de uso con el texto del greeting
             result = use_case.execute(data['name'])
             
-            return ControllerBase.formatResponse(result, 201)
+            return ControllerBase.format_response(result, 201)
 
         except IncorrectGreetingException as e:
-            return ControllerBase.formatResponse({"error": str(e)}, 400)
+            return ControllerBase.format_response({"error": str(e)}, 400)
             
         except Exception as e:
-            return ControllerBase.formatResponse(
+            return ControllerBase.format_response(
                 {"error": str(e)},
                 500
             )
 
-    @helloWorldController.route('/<int:id>', methods=['GET'])
-    def getHelloWorldById(id: int):
+    @hello_world_controller.route('/<int:id>', methods=['GET'])
+    def get_hello_world_by_id(id: int):
         """
         Obtiene un HelloWorld por su ID.
         
@@ -78,15 +78,15 @@ class HelloWorldController:
         result = use_case.execute(id)
         
         if result is None:
-            return ControllerBase.formatResponse(
+            return ControllerBase.format_response(
                 {"error": "HelloWorld not found"},
                 404
             )
         
-        return ControllerBase.formatResponse(result, 200)
+        return ControllerBase.format_response(result, 200)
 
-    @helloWorldController.route('/<int:id>', methods=['DELETE'])
-    def deleteHelloWorld(id: int):
+    @hello_world_controller.route('/<int:id>', methods=['DELETE'])
+    def delete_hello_world(id: int):
         """
         Elimina un HelloWorld por su ID.
         
@@ -99,12 +99,12 @@ class HelloWorldController:
         deleted = use_case.execute(id)
         
         if not deleted:
-            return ControllerBase.formatResponse(
+            return ControllerBase.format_response(
                 {"error": "HelloWorld not found"},
                 404
             )
         
-        return ControllerBase.formatResponse(
+        return ControllerBase.format_response(
             {"message": "HelloWorld deleted successfully"},
             200
         )

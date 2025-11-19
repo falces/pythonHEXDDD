@@ -72,7 +72,7 @@ class ShowMapper:
 **ShowsRepository.py** - Implementación:
 ```python
 class ShowsRepository(ShowRepositoryInterface):
-    def findByCriteria(self, criteria: Dict) -> List[Show]:
+    def find_by_criteria(self, criteria: Dict) -> List[Show]:
         # 1. Llama a API externa
         response = self.api_tools.get('/search/filters', params=criteria)
         

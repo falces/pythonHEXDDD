@@ -3,7 +3,7 @@ from Shared.Domain.Events.DomainEvent import DomainEvent
 
 
 class EntityBase():
-    def getModel(self):
+    def get_model(self):
         return self.model
 
 

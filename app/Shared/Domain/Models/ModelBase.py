@@ -7,7 +7,7 @@ class ModelBase():
     ):
         db.session.add(model)
 
-    def getModel(self) -> Self:
+    def get_model(self) -> Self:
         return self.model
 
     @staticmethod

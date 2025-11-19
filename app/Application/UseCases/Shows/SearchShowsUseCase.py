@@ -33,7 +33,7 @@ class SearchShowsUseCase:
             criteria = {}
         
         # Obtener entidades de dominio desde el repositorio
-        shows = self.repository.findByCriteria(criteria)
+        shows = self.repository.find_by_criteria(criteria)
         
         # Serializar y retornar
         return ShowMapper.toDictList(shows)

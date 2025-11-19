@@ -4,12 +4,12 @@ from Infrastructure.Repository.HelloWorldWriteRepository import HelloWorldWriteR
 from Application.HelloWorldService import HelloWorldService
 from Application.DTO.GreetingDTO import GreetingDTO
 
-helloWorldSignalListener = Blueprint('helloWorldSignalListener', __name__)
+hello_world_signal_listener = Blueprint('helloWorldSignalListener', __name__)
 
 class HelloWorldSignalListener():
 
     @signals['new_hello_world'].connect
-    def newCountryListener(
+    def new_country_listener(
         self,
         sender: str,
         message: dict,

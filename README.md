@@ -126,12 +126,12 @@ app.py (Flask App)
          │
          ▼
 2. Infrastructure/Controller/HelloWorldController.py
-   └─► createHelloWorld()
+   └─► create_hello_world()
          ├─► Valida request.get_json()
          ├─► Obtiene use case del container
          │     └─► current_app.container.create_hello_world_use_case()
          ├─► Ejecuta: use_case.execute(data['name'])
-         └─► Retorna: ControllerBase.formatResponse(result, 201)
+         └─► Retorna: ControllerBase.format_response(result, 201)
                │
                ▼
 3. Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py
@@ -204,11 +204,11 @@ app.py (Flask App)
          │
          ▼
 2. Infrastructure/Controller/HelloWorldController.py
-   └─► getAllHelloWorld()
+   └─► get_all_hello_world()
          ├─► Obtiene use case del container
          │     └─► current_app.container.get_all_hello_world_use_case()
          ├─► Ejecuta: use_case.execute()
-         └─► Retorna: ControllerBase.formatResponse(result, 200)
+         └─► Retorna: ControllerBase.format_response(result, 200)
                │
                ▼
 3. Application/UseCases/HelloWorld/GetAllHelloWorldUseCase.py
@@ -360,7 +360,7 @@ def subscribed_to(self):
 4. Command Handler procesa (ej: Update/Delete)
    └─► Application/CommandHandlers/UpdateHelloWorldHandler.py
          ├─► Valida existencia con Read Repository
-         │     └─► read_repository.findById(id)  ⬅️ CQRS Puro
+         │     └─► read_repository.find_by_id(id)  ⬅️ CQRS Puro
          │           └─► Solo para validación, NO para modificar
          │
          ├─► Crea Value Object: Greeting.create()
@@ -379,7 +379,7 @@ def subscribed_to(self):
 5. Write Repository persiste (SOLO escritura)
    └─► Infrastructure/Repository/HelloWorldWriteRepository.py
          ├─► Métodos disponibles: save(), delete()
-         ├─► Métodos ELIMINADOS: findById(), findAll() ⬅️ CQRS Puro
+         ├─► Métodos ELIMINADOS: find_by_id(), find_all() ⬅️ CQRS Puro
          ├─► Mantiene integridad de dominio
          └─► Ejecuta: db.session.commit()
                │
@@ -403,7 +403,7 @@ def __init__(
     event_dispatcher: EventDispatcher
 ):
     self.repository = repository           # Para save()
-    self.read_repository = read_repository # Para validaciones (findById)
+    self.read_repository = read_repository # Para validaciones (find_by_id)
 ```
 
 #### 5.2 Flujo de Query (Lectura)
@@ -477,11 +477,11 @@ El proyecto implementa **CQRS Puro** con separación estricta:
 
 - **Write Repository** (`HelloWorldRepository`):
   - ✅ Métodos: `save()`, `delete()`
-  - ❌ Eliminados: `findById()`, `findAll()`
+  - ❌ Eliminados: `find_by_id()`, `find_all()`
   - Solo para operaciones de escritura (CUD)
 
 - **Read Repository** (`HelloWorldReadRepository`):
-  - ✅ Métodos: `findById()`, `find_all()`, `search()`
+  - ✅ Métodos: `find_by_id()`, `find_all()`, `search()`
   - Solo para operaciones de lectura
   - Optimizado con índices y queries específicas
 
@@ -568,7 +568,7 @@ app/
 │   │   ├── HelloWorldWriteRepository.py # ✅ Write Repository (CQRS Puro)
 │   │   │                                 # Solo: save(), delete()
 │   │   ├── HelloWorldReadRepository.py  # ✅ Read Repository (CQRS Puro)
-│   │   │                                 # Solo: findById(), find_all(), search()
+│   │   │                                 # Solo: find_by_id(), find_all(), search()
 │   │   └── ShowsRepository.py           # API externa
 │   │
 │   ├── Projections/               # 🔵 CQRS - Event-driven sync
@@ -655,11 +655,11 @@ El proyecto implementa **CQRS Puro** con separación estricta entre operaciones 
 class HelloWorldRepository:
     def save(self, entity): ...    # ✅ Persistir
     def delete(self, id): ...       # ✅ Eliminar
-    # ❌ NO tiene findById() ni findAll()
+    # ❌ NO tiene find_by_id() ni find_all()
 
 # Read Repository - SOLO lectura  
 class HelloWorldReadRepository:
-    def findById(self, id): ...     # ✅ Buscar por ID
+    def find_by_id(self, id): ...   # ✅ Buscar por ID
     def find_all(...): ...          # ✅ Listar todos
     def search(...): ...            # ✅ Buscar con filtros
     # ❌ NO tiene save() ni delete()
@@ -676,7 +676,7 @@ class UpdateHelloWorldHandler:
     
     def handle(self, command):
         # 1. Validar existencia con Read Repository
-        entity = self.read_repository.findById(command.id)  # ✅ Lectura
+        entity = self.read_repository.find_by_id(command.id)  # ✅ Lectura
         
         # 2. Modificar entidad (dominio)
         entity.greeting = new_greeting

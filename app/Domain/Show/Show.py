@@ -25,23 +25,23 @@ class Show(AggregateRootBase):
         self.show_type = show_type
         self.streaming_option = streaming_option
     
-    def getId(self) -> str:
+    def get_id(self) -> str:
         return self.show_id.value
     
-    def getTitle(self) -> str:
+    def get_title(self) -> str:
         return self.title.value
     
-    def getType(self) -> str:
+    def get_type(self) -> str:
         return self.show_type.value
     
-    def getStreamingOption(self) -> Optional[StreamingOption]:
+    def get_streaming_option(self) -> Optional[StreamingOption]:
         return self.streaming_option
     
-    def isMovie(self) -> bool:
-        return self.show_type.isMovie()
+    def is_movie(self) -> bool:
+        return self.show_type.is_movie()
     
-    def isSeries(self) -> bool:
-        return self.show_type.isSeries()
+    def is_series(self) -> bool:
+        return self.show_type.is_series()
     
-    def hasStreamingOption(self) -> bool:
+    def has_streaming_option(self) -> bool:
         return self.streaming_option is not None

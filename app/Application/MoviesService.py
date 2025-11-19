@@ -30,7 +30,7 @@ class MoviesService:
             Lista de shows en formato diccionario
         """
         # Obtener entidades de dominio desde el repositorio
-        shows = self.repository.findByCriteria(criteria)
+        shows = self.repository.find_by_criteria(criteria)
         
         # Convertir entidades a diccionarios para la respuesta
         return ShowMapper.toDictList(shows)
@@ -45,7 +45,7 @@ class MoviesService:
         Returns:
             Show en formato diccionario o None si no existe
         """
-        show = self.repository.findById(show_id)
+        show = self.repository.find_by_id(show_id)
         
         if show is None:
             return None

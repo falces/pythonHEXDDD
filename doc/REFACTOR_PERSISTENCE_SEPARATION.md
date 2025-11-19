@@ -37,7 +37,7 @@ class HelloWorldRepositoryInterface(ABC):
         pass
     
     @abstractmethod
-    def findAll(self) -> List[HelloWorld]:
+    def find_all(self) -> List[HelloWorld]:
         pass
 ```
 
@@ -90,8 +90,8 @@ class HelloWorldRepository(HelloWorldRepositoryInterface):
         db.session.commit()
         return HelloWorldMapper.toDomain(model)
     
-    def findAll(self) -> List[HelloWorld]:
-        models = db.session.query(HelloWorldModel).all()
+    def find_all(self) -> List[HelloWorld]:
+        models = HelloWorldModel.query.all()
         return [HelloWorldMapper.toDomain(m) for m in models]
 ```
 
@@ -105,8 +105,8 @@ class HelloWorldService:
     def __init__(self, repository: HelloWorldRepositoryInterface):
         self.repository = repository  # ✅ Recibe INSTANCIA (no clase)
     
-    def getAllHelloWorld(self) -> list:
-        entities = self.repository.findAll()
+    def get_all_hello_world(self) -> list:
+        entities = self.repository.find_all()
         # Serializar con el serializer de Application
         from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
         return [HelloWorldSerializer.to_dict(e) for e in entities]
@@ -127,11 +127,11 @@ class HelloWorldService:
 **`HelloWorldController.py`** - Controlador con DI correcta:
 ```python
 @helloWorldController.route('/', methods=['GET'])
-def getAllHelloWorld():
-    repository = HelloWorldRepository()           # 1. Instanciar repositorio
-    service = HelloWorldService(repository)       # 2. Inyectar en servicio
-    result = service.getAllHelloWorld()           # 3. Ejecutar caso de uso
-    return ControllerBase.formatResponse(result, 200)
+def get_all_hello_world():
+    container = current_app.container
+    service = container.hello_world_service()     # 2. Obtener servicio
+    result = service.get_all_hello_world()           # 3. Ejecutar caso de uso
+    return ControllerBase.format_response(result, 200)
 ```
 
 ---

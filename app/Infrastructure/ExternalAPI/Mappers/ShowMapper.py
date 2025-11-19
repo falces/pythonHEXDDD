@@ -62,13 +62,13 @@ class ShowMapper:
             dict: Representación en diccionario
         """
         result = {
-            "id": entity.getId(),
-            "originalTitle": entity.getTitle(),
-            "showType": entity.getType(),
+            "id": entity.get_id(),
+            "originalTitle": entity.get_title(),
+            "showType": entity.get_type(),
         }
         
-        if entity.hasStreamingOption():
-            result["streamingOptions"] = entity.getStreamingOption().toDict()
+        if entity.has_streaming_option():
+            result["streamingOptions"] = entity.get_streaming_option().to_dict()
         else:
             result["streamingOptions"] = {}
         

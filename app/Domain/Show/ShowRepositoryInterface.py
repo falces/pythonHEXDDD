@@ -13,7 +13,7 @@ class ShowRepositoryInterface(ABC):
     """
 
     @abstractmethod
-    def findByCriteria(self, criteria: Dict[str, any]) -> List[Show]:
+    def find_by_criteria(self, criteria: Dict[str, any]) -> List[Show]:
         """
         Busca shows según criterios específicos.
         
@@ -27,7 +27,7 @@ class ShowRepositoryInterface(ABC):
         pass
 
     @abstractmethod
-    def findById(self, show_id: str) -> Optional[Show]:
+    def find_by_id(self, show_id: str) -> Optional[Show]:
         """
         Busca un show por su ID.
         

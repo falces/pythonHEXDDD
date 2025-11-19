@@ -35,7 +35,7 @@ class ShowsAPIRepository(ShowRepositoryInterface):
         }
         self.api_tools = APITools(self.url, headers)
     
-    def findByCriteria(self, criteria: Dict[str, any]) -> List[Show]:
+    def find_by_criteria(self, criteria: Dict[str, any]) -> List[Show]:
         """
         Busca shows según criterios específicos consultando la API externa.
         
@@ -68,7 +68,7 @@ class ShowsAPIRepository(ShowRepositoryInterface):
             app.logger.error(f"Error fetching shows from API: {e}")
             return []
     
-    def findById(self, show_id: str) -> Optional[Show]:
+    def find_by_id(self, show_id: str) -> Optional[Show]:
         """
         Busca un show por su ID en la API externa.
         

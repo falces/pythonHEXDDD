@@ -25,8 +25,8 @@ class ShowType(StringValueObject):
     def create(value: str) -> Self:
         return ShowType(value)
     
-    def isMovie(self) -> bool:
+    def is_movie(self) -> bool:
         return self.value == 'movie'
     
-    def isSeries(self) -> bool:
+    def is_series(self) -> bool:
         return self.value == 'series'

@@ -2,7 +2,7 @@ from flask import Blueprint, request, current_app
 from Infrastructure.Controller.ControllerBase import ControllerBase
 
 
-moviesController = Blueprint('moviesController', __name__)
+movies_controller = Blueprint('moviesController', __name__)
 
 
 class MoviesController:
@@ -11,8 +11,8 @@ class MoviesController:
     Usa el DI Container para obtener casos de uso.
     """
 
-    @moviesController.route('/', methods=['GET'])
-    def getMoviesBy():
+    @movies_controller.route('/', methods=['GET'])
+    def get_movies_by():
         """
         Obtiene shows/movies según criterios de búsqueda.
         
@@ -28,10 +28,10 @@ class MoviesController:
         # Ejecutar el caso de uso
         result = use_case.execute(criteria)
         
-        return ControllerBase.formatResponse(result, 200)
+        return ControllerBase.format_response(result, 200)
 
-    @moviesController.route('/<string:show_id>', methods=['GET'])
-    def getMovieById(show_id: str):
+    @movies_controller.route('/<string:show_id>', methods=['GET'])
+    def get_movie_by_id(show_id: str):
         """
         Obtiene un show/movie por su ID.
         
@@ -45,9 +45,9 @@ class MoviesController:
         result = use_case.execute(show_id)
         
         if result is None:
-            return ControllerBase.formatResponse(
+            return ControllerBase.format_response(
                 {"error": "Show not found"},
                 404
             )
         
-        return ControllerBase.formatResponse(result, 200)
+        return ControllerBase.format_response(result, 200)

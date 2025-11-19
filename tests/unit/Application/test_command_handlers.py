@@ -84,7 +84,7 @@ class TestUpdateHelloWorldHandler:
         mock_repository.save = Mock(return_value=existing_hello_world)
         
         mock_read_repository = Mock()
-        mock_read_repository.findById = Mock(return_value=existing_hello_world)
+        mock_read_repository.find_by_id = Mock(return_value=existing_hello_world)
         
         mock_event_dispatcher = Mock()
         mock_event_dispatcher.publish_multiple = Mock()
@@ -97,7 +97,7 @@ class TestUpdateHelloWorldHandler:
         
         # Assert
         assert result is True
-        mock_read_repository.findById.assert_called_once_with(1)
+        mock_read_repository.find_by_id.assert_called_once_with(1)
         mock_repository.save.assert_called_once()
         
         # El handler modifica la entidad directamente
@@ -109,7 +109,7 @@ class TestUpdateHelloWorldHandler:
         mock_repository = Mock()
         
         mock_read_repository = Mock()
-        mock_read_repository.findById = Mock(return_value=None)
+        mock_read_repository.find_by_id = Mock(return_value=None)
         
         mock_event_dispatcher = Mock()
         
@@ -133,7 +133,7 @@ class TestUpdateHelloWorldHandler:
         mock_repository = Mock()
         
         mock_read_repository = Mock()
-        mock_read_repository.findById = Mock(return_value=existing_hello_world)
+        mock_read_repository.find_by_id = Mock(return_value=existing_hello_world)
         
         mock_event_dispatcher = Mock()
         mock_event_dispatcher.publish_multiple = Mock()
@@ -176,7 +176,7 @@ class TestDeleteHelloWorldHandler:
         
         # Assert
         assert result is True
-        mock_read_repository.findById.assert_called_once_with(1)
+        mock_read_repository.find_by_id.assert_called_once_with(1)
         mock_repository.delete.assert_called_once_with(1)
     
     def test_handle_returns_false_when_not_found(self):
@@ -185,7 +185,7 @@ class TestDeleteHelloWorldHandler:
         mock_repository = Mock()
         
         mock_read_repository = Mock()
-        mock_read_repository.findById = Mock(return_value=None)
+        mock_read_repository.find_by_id = Mock(return_value=None)
         
         mock_event_dispatcher = Mock()
         

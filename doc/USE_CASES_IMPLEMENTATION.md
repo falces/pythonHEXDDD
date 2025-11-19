@@ -31,9 +31,10 @@ class HelloWorldService:
     def __init__(self, repository):
         self.repository = repository
     
-    def getAllHelloWorld(self):
-        # Lógica de obtener todos
-        ...
+    def get_all_hello_world():
+    use_case = current_app.container.get_all_hello_world_use_case()
+    result = use_case.execute()
+    return format_response(result, 200)
     
     def addHelloWorld(self, dto):
         # Lógica de crear
@@ -105,7 +106,7 @@ class GetHelloWorldByIdUseCase:
         self.repository = repository
     
     def execute(self, id: int) -> Optional[dict]:
-        entity = self.repository.findById(id)
+        entity = self.repository.find_by_id(id)
         return HelloWorldSerializer.to_dict(entity) if entity else None
 
 
@@ -185,10 +186,10 @@ Database
 **Controller:**
 ```python
 @helloWorldController.route('/', methods=['GET'])
-def getAllHelloWorld():
-    use_case = container.get_all_hello_world_use_case()
-    result = use_case.execute()  # Siempre es execute()
-    return formatResponse(result, 200)
+def get_all_hello_world():
+    use_case = current_app.container.get_all_hello_world_use_case()
+    result = service.get_all_hello_world()  # Método del servicio
+    return format_response(result, 200)
 ```
 
 ---
@@ -456,9 +457,9 @@ def updateHelloWorld(id: int):
     result = use_case.execute(id, data['name'])
     
     if result is None:
-        return formatResponse({"error": "Not found"}, 404)
+        return format_response({"error": "Not found"}, 404)
     
-    return formatResponse(result, 200)
+    return format_response(result, 200)
 ```
 
 ---
