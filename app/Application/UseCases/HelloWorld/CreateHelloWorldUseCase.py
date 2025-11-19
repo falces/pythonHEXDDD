@@ -1,8 +1,8 @@
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.Greeting import Greeting
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
-from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
+from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
+from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
 
 
 class CreateHelloWorldUseCase:
@@ -11,7 +11,7 @@ class CreateHelloWorldUseCase:
     Su única responsabilidad es orquestar la creación y persistencia.
     """
 
-    def __init__(self, repository: HelloWorldRepositoryInterface, event_dispatcher: EventDispatcher):
+    def __init__(self, repository: HelloWorldRepositoryInterface, event_dispatcher: EventDispatcherInterface):
         self.repository = repository
         self.event_dispatcher = event_dispatcher
 
@@ -25,8 +25,11 @@ class CreateHelloWorldUseCase:
         # 3. Persistir la entidad a través del repositorio
         saved_entity = self.repository.save(hello_world)
 
-        # 4. Publicar los eventos de dominio registrados
+        # 4. Marcar como creado para registrar el evento (ahora que tenemos el ID)
+        saved_entity.mark_as_created(saved_entity.id)
+
+        # 5. Publicar los eventos de dominio registrados
         self.event_dispatcher.publish_multiple(saved_entity.pull_domain_events())
 
-        # 5. Serializar la entidad a un diccionario para la respuesta
-        return HelloWorldMapper.toDict(saved_entity)
+        # 6. Serializar la entidad a un diccionario para la respuesta
+        return HelloWorldSerializer.to_dict(saved_entity)

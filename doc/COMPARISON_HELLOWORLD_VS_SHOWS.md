@@ -62,7 +62,7 @@ class HelloWorldService:
     
     def getAllHelloWorld(self) -> list:
         entities = self.repository.findAll()
-        return [HelloWorldMapper.toDict(e) for e in entities]
+        return [HelloWorldMapper.to_dict(e) for e in entities]
 ```
 
 **MoviesService:**

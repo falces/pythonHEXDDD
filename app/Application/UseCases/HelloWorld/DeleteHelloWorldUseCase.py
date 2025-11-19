@@ -1,6 +1,6 @@
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
 from Domain.HelloWorld.Events.HelloWorldDeleted import HelloWorldDeleted
-from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
+from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 
 
 class DeleteHelloWorldUseCase:
@@ -14,7 +14,7 @@ class DeleteHelloWorldUseCase:
     - Retornar el resultado de la operación
     """
     
-    def __init__(self, repository: HelloWorldRepositoryInterface, event_dispatcher: EventDispatcher):
+    def __init__(self, repository: HelloWorldRepositoryInterface, event_dispatcher: EventDispatcherInterface):
         self.repository = repository
         self.event_dispatcher = event_dispatcher
     
@@ -28,12 +28,6 @@ class DeleteHelloWorldUseCase:
         Returns:
             bool: True si se eliminó correctamente, False si no existía
         """
-        # Primero verificar si existe (opcional, pero útil para el evento)
-        entity = self.repository.delete(hello_world_id)
-        
-        if not entity:
-            return False
-        
         # Eliminar usando el repositorio
         deleted = self.repository.delete(hello_world_id)
         

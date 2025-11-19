@@ -31,6 +31,19 @@ El proyecto implementa una arquitectura en capas siguiendo los principios de Cle
 └─────────────────────────────────────────────────────────────┘
 ```
 
+**Regla de Dependencias (Dependency Rule):**
+- Las dependencias apuntan **hacia adentro** (hacia el dominio)
+- **Domain** → No depende de nada (núcleo puro)
+- **Application** → Solo depende de Domain (nunca de Infrastructure)
+- **Infrastructure** → Puede depender de Domain y Application
+- **Inversión de Dependencias (DIP)**: Se usan interfaces en Domain/Application, implementadas en Infrastructure
+
+**Ejemplos aplicados:**
+- ✅ **Correcto**: `Application/UseCases/` importa `Shared/Domain/Events/EventDispatcherInterface.py`
+- ❌ **Incorrecto**: `Application/UseCases/` importa `Shared/Infrastructure/Events/EventDispatcher.py`
+- ✅ **Correcto**: `Application/UseCases/` usa `Application/Serializers/HelloWorldSerializer.py` para serialización
+- ❌ **Incorrecto**: `Application/UseCases/` usa `Infrastructure/Persistence/Mappers/HelloWorldMapper.py`
+
 ### Patrones Implementados
 
 - ✅ **Hexagonal Architecture** - Separación entre dominio e infraestructura
@@ -137,7 +150,7 @@ app.py (Flask App)
          │
          ├─► Persiste en repositorio
          │     └─► repository.save(hello_world)
-         │           └─► Infrastructure/Repository/HelloWorldRepository.py
+         │           └─► Infrastructure/Repository/HelloWorldWriteRepository.py
          │                 ├─► Mapea a modelo: HelloWorldMapper.toModel()
          │                 ├─► Ejecuta: db.session.add(model)
          │                 ├─► Ejecuta: db.session.commit()
@@ -155,7 +168,7 @@ app.py (Flask App)
          │                 └─► Continúa aunque un suscriptor falle
          │
          └─► Serializa respuesta
-               └─► HelloWorldMapper.toDict(saved_entity)
+               └─► HelloWorldSerializer.to_dict(saved_entity)
                      └─► Retorna: {"id": 1, "greeting": "Hello World"}
                            │
                            ▼
@@ -172,11 +185,11 @@ app.py (Flask App)
 | 2 | `Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py` | Orquesta la creación (use case) | Value Object |
 | 3 | `Domain/HelloWorld/ValueObjects/Greeting.py` | Valida reglas del greeting | Entidad |
 | 4 | `Domain/HelloWorld/HelloWorld.py` | Entidad de dominio, registra eventos | Repositorio |
-| 5 | `Infrastructure/Repository/HelloWorldRepository.py` | Persiste en base de datos | Event Dispatcher |
+| 5 | `Infrastructure/Repository/HelloWorldWriteRepository.py` | Persiste en base de datos (CQRS Puro) | Event Dispatcher |
 | 6 | `Shared/Infrastructure/Events/EventDispatcher.py` | Distribuye eventos a suscriptores | Event Handlers |
 | 7 | `Application/EventHandlers/HelloWorldCreatedLogger.py` | Registra log del evento | - |
 | 8 | `Infrastructure/Projections/HelloWorldProjection.py` | Actualiza read models | - |
-| 9 | `Infrastructure/Persistence/Mappers/HelloWorldMapper.py` | Serializa respuesta | Controller |
+| 9 | `Application/Serializers/HelloWorldSerializer.py` | Serializa respuesta (capa aplicación) | Controller |
 
 ---
 
@@ -286,7 +299,23 @@ app.py (Flask App)
 | **HelloWorldDeletedLogger** | `Application/EventHandlers/HelloWorldDeletedLogger.py` | `HelloWorldDeleted` | Registra log de eliminación |
 | **HelloWorldProjection** | `Infrastructure/Projections/HelloWorldProjection.py` | `HelloWorldCreated`, `HelloWorldDeleted` | Sincroniza read models (CQRS) |
 
-**Nota importante**: El `EventDispatcher` soporta suscriptores que escuchan un único evento o múltiples eventos:
+**Nota importante sobre Dependency Inversion Principle (DIP)**: 
+
+El proyecto aplica DIP usando `EventDispatcherInterface` (capa Domain) que es implementada por `EventDispatcher` (capa Infrastructure). Esto permite que la capa de Aplicación dependa de abstracciones, no de implementaciones concretas:
+
+```python
+# ✅ Correcto - Use Case depende de la interfaz (Domain)
+from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
+
+class CreateHelloWorldUseCase:
+    def __init__(self, repository, event_dispatcher: EventDispatcherInterface):
+        self.event_dispatcher = event_dispatcher  # Interfaz, no implementación
+
+# ❌ Incorrecto - Use Case NO debe depender de Infrastructure
+from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
+```
+
+El `EventDispatcher` soporta suscriptores que escuchan un único evento o múltiples eventos:
 
 ```python
 # Suscriptor a un evento
@@ -338,7 +367,7 @@ def subscribed_to(self):
          ├─► Modifica Entidad: hello_world.greeting = new_greeting
          ├─► Persiste con Write Repository
          │     └─► repository.save(hello_world)  ⬅️ CQRS Puro
-         │           └─► Infrastructure/Repository/HelloWorldRepository.py
+         │           └─► Infrastructure/Repository/HelloWorldWriteRepository.py
          │                 ├─► Solo métodos: save() y delete()
          │                 ├─► NO tiene findById() ni findAll()
          │                 └─► Optimizado SOLO para escritura
@@ -348,7 +377,7 @@ def subscribed_to(self):
                │
                ▼
 5. Write Repository persiste (SOLO escritura)
-   └─► Infrastructure/Repository/HelloWorldRepository.py
+   └─► Infrastructure/Repository/HelloWorldWriteRepository.py
          ├─► Métodos disponibles: save(), delete()
          ├─► Métodos ELIMINADOS: findById(), findAll() ⬅️ CQRS Puro
          ├─► Mantiene integridad de dominio
@@ -508,6 +537,10 @@ app/
 │   │   ├── UpdateHelloWorldHandler.py
 │   │   └── DeleteHelloWorldHandler.py
 │   │
+│   ├── Serializers/               # Serialización para presentación
+│   │   └── HelloWorldSerializer.py # Serializa entidades → dict/JSON
+│   │                               # Solo: to_dict()
+│   │
 │   ├── Queries/                   # 🔵 CQRS - Queries (lectura)
 │   │   ├── GetAllHelloWorldQuery.py
 │   │   ├── GetHelloWorldByIdQuery.py
@@ -532,7 +565,7 @@ app/
 │   │   └── MoviesController.py
 │   │
 │   ├── Repository/
-│   │   ├── HelloWorldRepository.py      # ✅ Write Repository (CQRS Puro)
+│   │   ├── HelloWorldWriteRepository.py # ✅ Write Repository (CQRS Puro)
 │   │   │                                 # Solo: save(), delete()
 │   │   ├── HelloWorldReadRepository.py  # ✅ Read Repository (CQRS Puro)
 │   │   │                                 # Solo: findById(), find_all(), search()
@@ -544,7 +577,8 @@ app/
 │   └── Persistence/
 │       ├── database.py            # Instancia de SQLAlchemy
 │       ├── Mappers/
-│       │   └── HelloWorldMapper.py      # Mapeo Domain ↔ Model
+│       │   └── HelloWorldMapper.py      # Mapeo Domain ↔ DB Model
+│       │                                # Solo: toDomain(), toModel()
 │       └── SQLAlchemy/
 │           └── HelloWorldModel.py       # Modelo de persistencia
 │
@@ -558,7 +592,8 @@ app/
     │   │   └── EntityBase.py      # Base para entidades (con eventos)
     │   ├── Events/
     │   │   ├── DomainEvent.py     # Base para eventos
-    │   │   └── DomainEventSubscriber.py  # Interfaz suscriptor
+    │   │   ├── DomainEventSubscriber.py  # Interfaz suscriptor
+    │   │   └── EventDispatcherInterface.py  # 🔵 Interfaz (DIP)
     │   └── ValueObjects/
     │       └── StringValueObject.py
     │
@@ -656,6 +691,45 @@ class UpdateHelloWorldHandler:
 - ✅ Escalabilidad: diferentes bases de datos para lectura/escritura
 - ✅ Mantenibilidad: cambios en escritura no afectan lectura
 - ✅ Consistencia eventual con Projections
+
+#### Mappers vs Serializers - Separación de Responsabilidades
+
+El proyecto utiliza **Mappers** y **Serializers** con responsabilidades claramente separadas:
+
+**1. Infrastructure/Persistence/Mappers/HelloWorldMapper** (Mapper - Persistencia)
+```python
+class HelloWorldMapper:
+    @staticmethod
+    def toDomain(model: HelloWorldModel) -> HelloWorld:
+        """DB Model → Domain Entity"""
+        # Convierte modelo SQLAlchemy a entidad de dominio
+        
+    @staticmethod
+    def toModel(entity: HelloWorld) -> HelloWorldModel:
+        """Domain Entity → DB Model"""
+        # Convierte entidad de dominio a modelo SQLAlchemy
+```
+
+**Responsabilidad:** Traducir entre modelos de persistencia (SQLAlchemy) y entidades de dominio.  
+**Usado por:** Repositorios (Write/Read)
+
+**2. Application/Serializers/HelloWorldSerializer** (Serializer - Presentación)
+```python
+class HelloWorldSerializer:
+    @staticmethod
+    def to_dict(entity: HelloWorld) -> dict:
+        """Domain Entity → Dict/JSON"""
+        # Serializa entidad para API/presentación
+```
+
+**Responsabilidad:** Serializar entidades de dominio para respuestas HTTP/JSON.  
+**Usado por:** Use Cases, Controllers
+
+**Regla arquitectónica:**
+- ✅ Application layer **NUNCA** importa el mapper de Infrastructure
+- ✅ Infrastructure layer **NUNCA** serializa a JSON/dict (responsabilidad de Application)
+- ✅ **Mapper** = transformación bidireccional (Entity ↔ Model)
+- ✅ **Serializer** = transformación unidireccional de salida (Entity → JSON)
 
 #### Event-Driven Architecture
 

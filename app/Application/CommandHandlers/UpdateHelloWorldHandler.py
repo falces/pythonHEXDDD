@@ -6,7 +6,7 @@ from Application.Commands.UpdateHelloWorldCommand import UpdateHelloWorldCommand
 from Domain.HelloWorld.ValueObjects.Greeting import Greeting
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
 from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
-from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
+from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 
 
 class UpdateHelloWorldHandler:
@@ -19,7 +19,7 @@ class UpdateHelloWorldHandler:
         self,
         repository: HelloWorldRepositoryInterface,
         read_repository: HelloWorldReadRepository,
-        event_dispatcher: EventDispatcher
+        event_dispatcher: EventDispatcherInterface
     ):
         self.repository = repository
         self.read_repository = read_repository

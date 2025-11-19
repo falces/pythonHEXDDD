@@ -289,7 +289,7 @@ class CreateHelloWorldUseCase:
         # e) Publicar eventos
         self.event_dispatcher.publish_multiple(events)
         
-        return HelloWorldMapper.toDict(saved_entity)
+        return HelloWorldSerializer.to_dict(saved_entity)
 ```
 
 ```python
@@ -535,7 +535,7 @@ class UpdateHelloWorldUseCase:
         events = updated.pull_domain_events()
         self.event_dispatcher.publish_multiple(events)
         
-        return HelloWorldMapper.toDict(updated)
+        return HelloWorldSerializer.to_dict(updated)
 ```
 
 ### Paso 5: Registrar Handler en Container

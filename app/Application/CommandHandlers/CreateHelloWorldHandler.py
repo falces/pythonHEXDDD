@@ -6,7 +6,7 @@ from Application.Commands.CreateHelloWorldCommand import CreateHelloWorldCommand
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.Greeting import Greeting
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
+from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 
 
 class CreateHelloWorldHandler:
@@ -18,7 +18,7 @@ class CreateHelloWorldHandler:
     def __init__(
         self, 
         repository: HelloWorldRepositoryInterface,
-        event_dispatcher: EventDispatcher
+        event_dispatcher: EventDispatcherInterface
     ):
         self.repository = repository
         self.event_dispatcher = event_dispatcher

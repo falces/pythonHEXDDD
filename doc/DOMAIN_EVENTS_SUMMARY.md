@@ -107,7 +107,7 @@ class CreateHelloWorldUseCase:
         events = saved.pull_domain_events()
         self.event_dispatcher.publish_multiple(events)
         
-        return HelloWorldMapper.toDict(saved)
+        return HelloWorldSerializer.to_dict(saved)
 
 # 3. Entidad
 class HelloWorld(AggregateRootBase):

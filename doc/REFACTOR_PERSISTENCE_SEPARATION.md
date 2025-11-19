@@ -107,13 +107,17 @@ class HelloWorldService:
     
     def getAllHelloWorld(self) -> list:
         entities = self.repository.findAll()
-        return [HelloWorldMapper.toDict(e) for e in entities]
+        # Serializar con el serializer de Application
+        from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
+        return [HelloWorldSerializer.to_dict(e) for e in entities]
     
     def addHelloWorld(self, greetingDTO: GreetingDTO) -> dict:
         greeting = Greeting.create(greetingDTO.name)
         entity = HelloWorld(greeting=greeting)
-        saved = self.repository.save(entity)
-        return HelloWorldMapper.toDict(saved)
+        saved = self.repository.save(hello_world)
+        # Serializar con el serializer de Application
+        from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
+        return HelloWorldSerializer.to_dict(saved)
 ```
 
 ---

@@ -80,7 +80,7 @@ class CreateHelloWorldUseCase:
         saved = self.repository.save(hello_world)
         
         # 4. Serializar y retornar
-        return HelloWorldMapper.toDict(saved)
+        return HelloWorldSerializer.to_dict(saved)
 
 
 # GetAllHelloWorldUseCase.py
@@ -93,7 +93,7 @@ class GetAllHelloWorldUseCase:
     
     def execute(self) -> List[dict]:
         entities = self.repository.findAll()
-        return [HelloWorldMapper.toDict(e) for e in entities]
+        return [HelloWorldSerializer.to_dict(e) for e in entities]
 
 
 # GetHelloWorldByIdUseCase.py
@@ -106,7 +106,7 @@ class GetHelloWorldByIdUseCase:
     
     def execute(self, id: int) -> Optional[dict]:
         entity = self.repository.findById(id)
-        return HelloWorldMapper.toDict(entity) if entity else None
+        return HelloWorldSerializer.to_dict(entity) if entity else None
 
 
 # DeleteHelloWorldUseCase.py
@@ -114,11 +114,20 @@ class DeleteHelloWorldUseCase:
     """
     Responsabilidad única: Eliminar un HelloWorld
     """
-    def __init__(self, repository):
+    def __init__(self, repository, event_dispatcher):
         self.repository = repository
+        self.event_dispatcher = event_dispatcher
     
     def execute(self, id: int) -> bool:
-        return self.repository.delete(id)
+        # Eliminar usando el repositorio
+        deleted = self.repository.delete(id)
+        
+        # Si se eliminó correctamente, publicar evento
+        if deleted:
+            event = HelloWorldDeleted(hello_world_id=id)
+            self.event_dispatcher.publish(event)
+        
+        return deleted
 ```
 
 **Beneficios:**
@@ -315,23 +324,24 @@ def test_create_hello_world_use_case():
     mock_repo.save.assert_called_once()
 
 
-def test_get_all_hello_world_use_case():
+def test_delete_hello_world_use_case():
     # Arrange
     mock_repo = Mock(spec=HelloWorldRepositoryInterface)
-    mock_repo.findAll.return_value = [
-        HelloWorld(Greeting.create("Hello 1")),
-        HelloWorld(Greeting.create("Hello 2"))
-    ]
+    mock_repo.delete.return_value = True
+    mock_event_dispatcher = Mock()
     
-    use_case = GetAllHelloWorldUseCase(repository=mock_repo)
+    use_case = DeleteHelloWorldUseCase(
+        repository=mock_repo,
+        event_dispatcher=mock_event_dispatcher
+    )
     
     # Act
-    result = use_case.execute()
+    result = use_case.execute(1)
     
     # Assert
-    assert len(result) == 2
-    assert result[0]["greeting"] == "Hello 1"
-    mock_repo.findAll.assert_called_once()
+    assert result is True
+    mock_repo.delete.assert_called_once_with(1)
+    mock_event_dispatcher.publish.assert_called_once()
 ```
 
 **Ventajas del testing:**
@@ -379,7 +389,7 @@ class GetAllHelloWorldUseCase:
     def execute(self):
         # Solo obtener y serializar
         entities = self.repository.findAll()
-        return [mapper.toDict(e) for e in entities]
+        return [HelloWorldSerializer.to_dict(e) for e in entities]
 ```
 
 ---
@@ -423,7 +433,7 @@ class UpdateHelloWorldUseCase:
         saved = self.repository.save(updated_entity)
         
         # 4. Serializar
-        return HelloWorldMapper.toDict(saved)
+        return HelloWorldSerializer.to_dict(saved)
 ```
 
 ### **2. Registrar en el Container**

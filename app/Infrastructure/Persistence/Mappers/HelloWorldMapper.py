@@ -47,22 +47,3 @@ class HelloWorldMapper:
             greeting=entity.greeting.value,
             id=getattr(entity, '_id', None)
         )
-
-    @staticmethod
-    def toDict(entity: HelloWorld) -> dict:
-        """
-        Convierte una entidad de dominio a diccionario para serialización.
-        
-        Args:
-            entity: Entidad de dominio HelloWorld
-            
-        Returns:
-            dict: Representación en diccionario
-        """
-        # Manejar tanto Value Objects como strings directos
-        greeting_value = entity.greeting.value if hasattr(entity.greeting, 'value') else entity.greeting
-        
-        return {
-            "id": getattr(entity, '_id', None),
-            "greeting": greeting_value,
-        }

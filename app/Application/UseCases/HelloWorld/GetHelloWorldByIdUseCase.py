@@ -1,6 +1,6 @@
 from typing import Optional
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
+from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
 
 
 class GetHelloWorldByIdUseCase:
@@ -33,4 +33,4 @@ class GetHelloWorldByIdUseCase:
             return None
         
         # Serializar y retornar
-        return HelloWorldMapper.toDict(hello_world)
+        return HelloWorldSerializer.to_dict(hello_world)

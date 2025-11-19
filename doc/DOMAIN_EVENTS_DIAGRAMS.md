@@ -54,7 +54,7 @@ sequenceDiagram
     Dispatcher-->>UseCase: void
     
     Note over UseCase: 6. Serializar y retornar
-    UseCase->>UseCase: HelloWorldMapper.toDict(saved_entity)
+    UseCase->>UseCase: HelloWorldSerializer.to_dict(saved_entity)
     UseCase-->>Controller: {"id": 123, "greeting": "World"}
     
     Controller-->>Client: HTTP 201 {"id": 123, "greeting": "World"}

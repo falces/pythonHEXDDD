@@ -1,10 +1,10 @@
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.Greeting import Greeting
-from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
+from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
 from config.signals import signals
 import uuid
-from Application.DTO import GreetingDTO
+from Application.DTO.GreetingDTO import GreetingDTO
 
 
 class HelloWorldService:
@@ -28,10 +28,10 @@ class HelloWorldService:
         """
         all_hello_world = self.repository.findAll()
 
-        # Usar el mapper para convertir entidades a diccionarios
+        # Usar el serializer para convertir entidades a diccionarios
         hello_world_list = []
         for hello_world in all_hello_world:
-            hello_world_list.append(HelloWorldMapper.toDict(hello_world))
+            hello_world_list.append(HelloWorldSerializer.to_dict(hello_world))
 
         return hello_world_list
     
@@ -52,7 +52,7 @@ class HelloWorldService:
         saved_entity = self.repository.save(hello_world)
 
         # Emitir señal con el resultado
-        result_dict = HelloWorldMapper.toDict(saved_entity)
+        result_dict = HelloWorldSerializer.to_dict(saved_entity)
         signals['new_hello_world'].send(
             sender=uuid.uuid4().hex,
             message=result_dict,

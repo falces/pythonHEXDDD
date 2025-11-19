@@ -1,9 +1,10 @@
 from typing import Dict, List, Type
 from Shared.Domain.Events.DomainEvent import DomainEvent
 from Shared.Domain.Events.DomainEventSubscriber import DomainEventSubscriber
+from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 
 
-class EventDispatcher:
+class EventDispatcher(EventDispatcherInterface):
     """
     Despachador de eventos de dominio.
     
