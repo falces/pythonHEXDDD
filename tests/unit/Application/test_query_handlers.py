@@ -18,114 +18,109 @@ from Application.ReadModels.HelloWorldListReadModel import HelloWorldListReadMod
 
 class TestGetAllHelloWorldHandler:
     """Tests para GetAllHelloWorldHandler"""
-    
+
     def test_handle_returns_paginated_results(self):
         """Debe retornar resultados paginados"""
         # Arrange
         read_models = [
-            HelloWorldReadModel(id=1, greeting="Test 1", created_at=datetime.now()),
-            HelloWorldReadModel(id=2, greeting="Test 2", created_at=datetime.now()),
+            HelloWorldReadModel(id=1, greeting="Test 1",
+                                created_at=datetime.now()),
+            HelloWorldReadModel(id=2, greeting="Test 2",
+                                created_at=datetime.now()),
         ]
-        
+
         mock_read_repository = Mock()
         mock_read_repository.find_all = Mock(return_value=read_models)
-        mock_read_repository.count = Mock(return_value=10)
-        
+
         handler = GetAllHelloWorldHandler(mock_read_repository)
-        query = GetAllHelloWorldQuery(page=1, page_size=10)
-        
+        query = GetAllHelloWorldQuery(limit=10, offset=0)
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
-        assert isinstance(result, HelloWorldListReadModel)
-        assert len(result.items) == 2
-        assert result.total == 10
-        assert result.page == 1
-        assert result.page_size == 10
-        
+        assert isinstance(result, list)
+        assert len(result) == 2
+
         mock_read_repository.find_all.assert_called_once_with(
-            page=1, page_size=10, sort_by='id', sort_order='asc'
+            limit=10, offset=0, sort_by='id', sort_order='asc'
         )
-        mock_read_repository.count.assert_called_once()
-    
+
     def test_handle_with_custom_sorting(self):
         """Debe aplicar ordenamiento personalizado"""
         # Arrange
         mock_read_repository = Mock()
         mock_read_repository.find_all = Mock(return_value=[])
-        mock_read_repository.count = Mock(return_value=0)
-        
+
         handler = GetAllHelloWorldHandler(mock_read_repository)
         query = GetAllHelloWorldQuery(sort_by='greeting', sort_order='desc')
-        
+
         # Act
         handler.handle(query)
-        
+
         # Assert
         mock_read_repository.find_all.assert_called_once_with(
-            page=1, page_size=10, sort_by='greeting', sort_order='desc'
+            limit=None, offset=None, sort_by='greeting', sort_order='desc'
         )
-    
-    def test_handle_calculates_pagination_metadata(self):
-        """Debe calcular correctamente los metadatos de paginación"""
+
+    def test_handle_with_default_params(self):
+        """Debe usar parámetros por defecto"""
         # Arrange
         mock_read_repository = Mock()
         mock_read_repository.find_all = Mock(return_value=[])
-        mock_read_repository.count = Mock(return_value=50)
-        
+
         handler = GetAllHelloWorldHandler(mock_read_repository)
-        query = GetAllHelloWorldQuery(page=3, page_size=10)
-        
+        query = GetAllHelloWorldQuery()
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
-        assert result.total == 50
-        assert result.total_pages == 5
-        assert result.has_next is True
-        assert result.has_previous is True
+        assert isinstance(result, list)
+        mock_read_repository.find_all.assert_called_once_with(
+            limit=None, offset=None, sort_by='id', sort_order='asc'
+        )
 
 
 class TestGetHelloWorldByIdHandler:
     """Tests para GetHelloWorldByIdHandler"""
-    
+
     def test_handle_returns_read_model_when_found(self):
         """Debe retornar read model cuando encuentra la entidad"""
         # Arrange
         read_model = HelloWorldReadModel(
-            id=1, 
-            greeting="Test", 
+            id=1,
+            greeting="Test",
             created_at=datetime.now()
         )
-        
+
         mock_read_repository = Mock()
         mock_read_repository.find_by_id = Mock(return_value=read_model)
-        
+
         handler = GetHelloWorldByIdHandler(mock_read_repository)
         query = GetHelloWorldByIdQuery(id=1)
-        
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
         assert result == read_model
         assert result.id == 1
         assert result.greeting == "Test"
         mock_read_repository.find_by_id.assert_called_once_with(1)
-    
+
     def test_handle_returns_none_when_not_found(self):
         """Debe retornar None cuando no encuentra la entidad"""
         # Arrange
         mock_read_repository = Mock()
         mock_read_repository.find_by_id = Mock(return_value=None)
-        
+
         handler = GetHelloWorldByIdHandler(mock_read_repository)
         query = GetHelloWorldByIdQuery(id=999)
-        
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
         assert result is None
         mock_read_repository.find_by_id.assert_called_once_with(999)
@@ -133,66 +128,64 @@ class TestGetHelloWorldByIdHandler:
 
 class TestSearchHelloWorldHandler:
     """Tests para SearchHelloWorldHandler"""
-    
-    def test_handle_searches_by_greeting(self):
-        """Debe buscar por criterio de greeting"""
+
+    def test_handle_searches_with_criteria(self):
+        """Debe buscar con criterios específicos"""
         # Arrange
         read_models = [
-            HelloWorldReadModel(id=1, greeting="Hello World", created_at=datetime.now()),
+            HelloWorldReadModel(id=1, greeting="Hello World",
+                                created_at=datetime.now()),
         ]
-        
+
         mock_read_repository = Mock()
         mock_read_repository.search = Mock(return_value=read_models)
-        mock_read_repository.count_search = Mock(return_value=1)
-        
+
         handler = SearchHelloWorldHandler(mock_read_repository)
-        query = SearchHelloWorldQuery(greeting_contains="Hello")
-        
+        query = SearchHelloWorldQuery(search_text="Hello")
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
-        assert isinstance(result, HelloWorldListReadModel)
-        assert len(result.items) == 1
-        assert result.items[0].greeting == "Hello World"
-        
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0].greeting == "Hello World"
+
         mock_read_repository.search.assert_called_once_with(
-            greeting_contains="Hello", page=1, page_size=10
+            search_text="Hello", limit=10, offset=0
         )
-    
+
     def test_handle_searches_without_criteria(self):
         """Debe buscar sin criterios (retornar todo)"""
         # Arrange
         mock_read_repository = Mock()
         mock_read_repository.search = Mock(return_value=[])
-        mock_read_repository.count_search = Mock(return_value=0)
-        
+
         handler = SearchHelloWorldHandler(mock_read_repository)
         query = SearchHelloWorldQuery()
-        
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
         mock_read_repository.search.assert_called_once_with(
-            greeting_contains=None, page=1, page_size=10
+            search_text=None, limit=10, offset=0
         )
-    
+
     def test_handle_with_pagination(self):
         """Debe aplicar paginación en búsqueda"""
         # Arrange
         mock_read_repository = Mock()
         mock_read_repository.search = Mock(return_value=[])
-        mock_read_repository.count_search = Mock(return_value=25)
-        
+
         handler = SearchHelloWorldHandler(mock_read_repository)
-        query = SearchHelloWorldQuery(greeting_contains="Test", page=2, page_size=5)
-        
+        query = SearchHelloWorldQuery(search_text="Test", limit=5, offset=5)
+
         # Act
         result = handler.handle(query)
-        
+
         # Assert
-        assert result.page == 2
-        assert result.page_size == 5
-        assert result.total == 25
-        assert result.total_pages == 5
+        assert isinstance(result, list)
+        mock_read_repository.search.assert_called_once_with(
+            search_text="Test", limit=5, offset=5
+        )

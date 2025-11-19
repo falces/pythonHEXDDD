@@ -21,6 +21,25 @@ Application/
 
 ---
 
+## ⚠️ Migración a CQRS
+
+**El flujo POST (CREATE) ahora usa CQRS con Command Bus:**
+
+- ✅ **CreateHelloWorldHandler** + **CommandBus** (nuevo patrón CQRS)
+- ⚠️ **CreateHelloWorldUseCase** (legacy, mantenido por compatibilidad)
+
+**Flujo actual (CQRS):**
+```python
+# Controller
+command = CreateHelloWorldCommand(greeting_text=data['greeting'])
+command_bus = current_app.container.command_bus()
+entity_id = command_bus.dispatch(command)  # Retorna solo el ID
+```
+
+**Ver README.md sección "Flujo de Escritura (Commands)" para detalles completos.**
+
+---
+
 ## 🎯 Patrón Use Case
 
 ### **Antes - Servicios con múltiples responsabilidades**
@@ -198,12 +217,12 @@ def get_all_hello_world():
 
 ### **HelloWorld (4 casos de uso)**
 
-| Use Case | Responsabilidad | Entrada | Salida |
-|----------|----------------|---------|--------|
-| `CreateHelloWorldUseCase` | Crear nuevo HelloWorld | `greeting_text: str` | `dict` |
-| `GetAllHelloWorldUseCase` | Listar todos | - | `List[dict]` |
-| `GetHelloWorldByIdUseCase` | Obtener por ID | `id: int` | `Optional[dict]` |
-| `DeleteHelloWorldUseCase` | Eliminar por ID | `id: int` | `bool` |
+| Use Case | Responsabilidad | Entrada | Salida | Estado |
+|----------|----------------|---------|--------|--------|
+| `CreateHelloWorldUseCase` | ~~Crear nuevo HelloWorld~~ | `greeting_text: str` | `dict` | ⚠️ **Deprecated** - Usar `CreateHelloWorldHandler` + `CommandBus` |
+| `GetAllHelloWorldUseCase` | Listar todos (usa QueryBus) | - | `List[dict]` | ✅ Activo |
+| `GetHelloWorldByIdUseCase` | Obtener por ID | `id: int` | `Optional[dict]` | ✅ Activo |
+| `DeleteHelloWorldUseCase` | Eliminar por ID | `id: int` | `bool` | ✅ Activo |
 
 ### **Shows/Movies (2 casos de uso)**
 

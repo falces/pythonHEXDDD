@@ -1,6 +1,6 @@
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
 from Domain.HelloWorld.HelloWorld import HelloWorld
-from Domain.HelloWorld.ValueObjects.Greeting import Greeting
+from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
 from config.signals import signals
 import uuid
@@ -12,7 +12,7 @@ class HelloWorldService:
     Servicio de aplicación para HelloWorld.
     Orquesta las operaciones de dominio y coordina con repositorios.
     """
-    
+
     def __init__(
         self,
         repository: HelloWorldRepositoryInterface,
@@ -34,7 +34,7 @@ class HelloWorldService:
             hello_world_list.append(HelloWorldSerializer.to_dict(hello_world))
 
         return hello_world_list
-    
+
     def addHelloWorld(
         self,
         greetingDTO: GreetingDTO,
@@ -43,8 +43,8 @@ class HelloWorldService:
         Crea un nuevo HelloWorld.
         """
         # Crear value object
-        greeting = Greeting.create(greetingDTO.name)
-        
+        greeting = GreetingValueObject.create(greetingDTO.name)
+
         # Crear entidad de dominio
         hello_world = HelloWorld(greeting=greeting)
 
@@ -57,6 +57,5 @@ class HelloWorldService:
             sender=uuid.uuid4().hex,
             message=result_dict,
         )
-        
-        return result_dict
 
+        return result_dict

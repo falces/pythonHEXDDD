@@ -6,12 +6,15 @@ info:
     
     ## Características
     
-    - Arquitectura Hexagonal
+    - Arquitectura Hexagonal (Puertos y Adaptadores)
     - Domain-Driven Design (DDD)
-    - CQRS con Use Cases
-    - Domain Events
-    - Dependency Injection
-    - Repository Pattern
+    - **CQRS Completo** (Command Query Responsibility Segregation)
+      - Command Bus para operaciones de escritura
+      - Query Bus para operaciones de lectura
+    - Domain Events con Event-Driven Architecture
+    - Dependency Injection Container
+    - Repository Pattern (Write/Read separation)
+    - Event Sourcing con Projections
     
     ## Autenticación
     
@@ -69,8 +72,15 @@ paths:
     post:
       tags:
         - HelloWorld
-      summary: Crear nuevo HelloWorld
-      description: Crea una nueva entidad HelloWorld con el greeting proporcionado
+      summary: Crear nuevo HelloWorld (CQRS)
+      description: |
+        Crea una nueva entidad HelloWorld con el greeting proporcionado.
+        
+        **Patrón CQRS implementado:**
+        - Crea un `CreateHelloWorldCommand`
+        - Lo despacha a través del `Command Bus`
+        - El `CreateHelloWorldHandler` procesa el comando
+        - Retorna el ID de la entidad creada
       operationId: createHelloWorld
       requestBody:
         required: true
@@ -79,9 +89,9 @@ paths:
             schema:
               type: object
               required:
-                - name
+                - greeting
               properties:
-                name:
+                greeting:
                   type: string
                   minLength: 1
                   maxLength: 255
@@ -91,11 +101,11 @@ paths:
               simple:
                 summary: Saludo simple
                 value:
-                  name: "Hello World"
+                  greeting: "Hello World"
               multilingual:
                 summary: Saludo multilingüe
                 value:
-                  name: "¡Hola Mundo! 你好世界"
+                  greeting: "¡Hola Mundo! 你好世界"
       responses:
         '201':
           description: HelloWorld creado exitosamente
@@ -113,7 +123,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Field 'name' is required"
+                error: "Field 'greeting' is required"
         '500':
           description: Error interno del servidor
           content:

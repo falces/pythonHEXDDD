@@ -120,27 +120,37 @@ app.py (Flask App)
 
 **Endpoint**: `POST /api/v1/hello-world/`
 
+**⚠️ CQRS con Command Bus implementado**: Este flujo usa CommandBus en lugar de Use Case directo.
+
 ```
 1. Cliente HTTP (POST /api/v1/hello-world/)
-   └─► Body: {"name": "Hello World"}
+   └─► Body: {"greeting": "Hello World"}
          │
          ▼
 2. Infrastructure/Controller/HelloWorldController.py
    └─► create_hello_world()
          ├─► Valida request.get_json()
-         ├─► Obtiene use case del container
-         │     └─► current_app.container.create_hello_world_use_case()
-         ├─► Ejecuta: use_case.execute(data['name'])
-         └─► Retorna: ControllerBase.format_response(result, 201)
+         ├─► Crea el comando CQRS
+         │     └─► CreateHelloWorldCommand(greeting_text=data['greeting'])
+         ├─► Obtiene Command Bus del container
+         │     └─► current_app.container.command_bus()
+         ├─► Despacha comando: command_bus.dispatch(command)
+         └─► Retorna: ControllerBase.format_response({"id": entity_id, "greeting": ...}, 201)
                │
                ▼
-3. Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py
-   └─► execute(greeting_text: str)
+3. Shared/Application/CommandBus.py
+   └─► dispatch(command)
+         ├─► Busca handler registrado: CreateHelloWorldHandler
+         └─► Invoca: handler.handle(command)
+               │
+               ▼
+4. Application/CommandHandlers/CreateHelloWorldHandler.py
+   └─► handle(command: CreateHelloWorldCommand)
          ├─► Crea Value Object
-         │     └─► Greeting.create(greeting_text)
-         │           └─► Domain/HelloWorld/ValueObjects/Greeting.py
+         │     └─► GreetingValueObject.create(command.greeting_text)
+         │           └─► Domain/HelloWorld/ValueObjects/GreetingValueObject.py
          │                 ├─► Valida: no vacío, longitud < 255
-         │                 └─► Retorna: Greeting instance
+         │                 └─► Retorna: GreetingValueObject instance
          │
          ├─► Crea entidad de dominio
          │     └─► HelloWorld.create(greeting)
@@ -167,12 +177,12 @@ app.py (Flask App)
          │                 │           └─► Actualiza read models (eventual consistency)
          │                 └─► Continúa aunque un suscriptor falle
          │
-         └─► Serializa respuesta
-               └─► HelloWorldSerializer.to_dict(saved_entity)
-                     └─► Retorna: {"id": 1, "greeting": "Hello World"}
+         └─► Retorna ID de la entidad creada
+               └─► return saved_entity.id
+                     └─► El controller construye la respuesta
                            │
                            ▼
-4. Cliente HTTP recibe
+5. Cliente HTTP recibe
    └─► Status: 201 Created
    └─► Body: {"id": 1, "greeting": "Hello World"}
 ```
@@ -181,15 +191,16 @@ app.py (Flask App)
 
 | # | Archivo | Responsabilidad | Siguiente paso |
 |---|---------|-----------------|----------------|
-| 1 | `Infrastructure/Controller/HelloWorldController.py` | Recibe HTTP request, valida datos | Use Case |
-| 2 | `Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py` | Orquesta la creación (use case) | Value Object |
-| 3 | `Domain/HelloWorld/ValueObjects/Greeting.py` | Valida reglas del greeting | Entidad |
-| 4 | `Domain/HelloWorld/HelloWorld.py` | Entidad de dominio, registra eventos | Repositorio |
-| 5 | `Infrastructure/Repository/HelloWorldWriteRepository.py` | Persiste en base de datos (CQRS Puro) | Event Dispatcher |
-| 6 | `Shared/Infrastructure/Events/EventDispatcher.py` | Distribuye eventos a suscriptores | Event Handlers |
-| 7 | `Application/EventHandlers/HelloWorldCreatedLogger.py` | Registra log del evento | - |
-| 8 | `Infrastructure/Projections/HelloWorldProjection.py` | Actualiza read models | - |
-| 9 | `Application/Serializers/HelloWorldSerializer.py` | Serializa respuesta (capa aplicación) | Controller |
+| 1 | `Infrastructure/Controller/HelloWorldController.py` | Recibe HTTP request, crea comando | Command Bus |
+| 2 | `Application/Commands/CreateHelloWorldCommand.py` | Comando inmutable con datos | Command Bus |
+| 3 | `Shared/Application/CommandBus.py` | Despacha comando al handler | Command Handler |
+| 4 | `Application/CommandHandlers/CreateHelloWorldHandler.py` | Ejecuta lógica de negocio | Value Object |
+| 5 | `Domain/HelloWorld/ValueObjects/GreetingValueObject.py` | Valida reglas del greeting | Entidad |
+| 6 | `Domain/HelloWorld/HelloWorld.py` | Entidad de dominio, registra eventos | Repositorio |
+| 7 | `Infrastructure/Repository/HelloWorldWriteRepository.py` | Persiste en base de datos (CQRS Puro) | Event Dispatcher |
+| 8 | `Shared/Infrastructure/Events/EventDispatcher.py` | Distribuye eventos a suscriptores | Event Handlers |
+| 9 | `Application/EventHandlers/HelloWorldCreatedLogger.py` | Registra log del evento | - |
+| 10 | `Infrastructure/Projections/HelloWorldProjection.py` | Actualiza read models | Controller |
 
 ---
 
@@ -335,13 +346,16 @@ def subscribed_to(self):
 
 #### 5.1 Flujo de Command (Escritura)
 
-**⚠️ CQRS Puro**: Los Command Handlers usan **solo Write Repository** para persistir y **Read Repository** para validaciones.
+**✅ CQRS Puro IMPLEMENTADO**: El flujo POST ahora usa Command Bus correctamente.
 
 ```
 1. Controller recibe request de escritura
    └─► Infrastructure/Controller/HelloWorldController.py
-         │
-         ▼
+         ├─► POST /api/v1/hello-world/
+         ├─► Body: {"greeting": "Hello World"}
+         └─► Crea comando y lo despacha
+               │
+               ▼
 2. Crea Command (inmutable)
    └─► Application/Commands/CreateHelloWorldCommand.py
          ├─► @dataclass(frozen=True)
@@ -350,6 +364,7 @@ def subscribed_to(self):
                │
                ▼
 3. Despacha Command al Bus
+   └─► command_bus = current_app.container.command_bus()
    └─► command_bus.dispatch(command)
          └─► Shared/Application/CommandBus.py
                ├─► Busca handler registrado por tipo
@@ -610,6 +625,13 @@ app/
 ## 📚 Documentación Adicional
 
 ### Guías Disponibles
+
+- **[CQRS_MIGRATION.md](doc/CQRS_MIGRATION.md)** - 🆕 Migración a CQRS Completo
+  - Flujo POST refactorizado con Command Bus
+  - Comparación antes/después
+  - Componentes CQRS (Command, Handler, Bus)
+  - Correcciones de imports circulares
+  - Tests actualizados
 
 - **[TESTING.md](doc/TESTING.md)** - Guía completa de testing
   - Tests unitarios e integración

@@ -46,12 +46,12 @@ Obtiene todos los HelloWorld registrados.
 ```
 
 #### `POST /api/v1/hello-world/`
-Crea un nuevo HelloWorld.
+Crea un nuevo HelloWorld usando **CQRS con Command Bus**.
 
 **Request Body:**
 ```json
 {
-  "name": "Hello from Spain"
+  "greeting": "Hello from Spain"
 }
 ```
 
@@ -62,6 +62,19 @@ Crea un nuevo HelloWorld.
   "greeting": "Hello from Spain"
 }
 ```
+
+**Respuesta error (400):**
+```json
+{
+  "error": "Field 'greeting' is required"
+}
+```
+
+**Nota:** Este endpoint ahora usa el patrón CQRS completo:
+- Crea un `CreateHelloWorldCommand`
+- Lo despacha a través del `Command Bus`
+- El `CreateHelloWorldHandler` procesa el comando
+- Ver [CQRS_MIGRATION.md](CQRS_MIGRATION.md) para más detalles
 
 #### `GET /api/v1/hello-world/{id}`
 Obtiene un HelloWorld específico por ID.

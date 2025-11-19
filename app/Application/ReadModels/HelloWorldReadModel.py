@@ -13,7 +13,7 @@ class HelloWorldReadModel:
     """
     Modelo de lectura para HelloWorld.
     Optimizado para queries, sin comportamiento de dominio.
-    
+
     Attributes:
         id: Identificador único
         greeting: Texto del saludo
@@ -24,11 +24,11 @@ class HelloWorldReadModel:
     greeting: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
-    
+
     def to_dict(self) -> dict:
         """
         Convierte el read model a diccionario para serialización.
-        
+
         Returns:
             dict: Representación en diccionario
         """
@@ -36,28 +36,36 @@ class HelloWorldReadModel:
             'id': self.id,
             'greeting': self.greeting
         }
-        
+
         if self.created_at:
             result['created_at'] = self.created_at.isoformat()
         if self.updated_at:
             result['updated_at'] = self.updated_at.isoformat()
-            
+
         return result
-    
+
     @staticmethod
     def from_dict(data: dict) -> 'HelloWorldReadModel':
         """
         Crea un read model desde un diccionario.
-        
+
         Args:
             data: Diccionario con los datos
-            
+
         Returns:
             HelloWorldReadModel: Instancia creada
         """
+        created_at = data.get('created_at')
+        if created_at and isinstance(created_at, str):
+            created_at = datetime.fromisoformat(created_at)
+
+        updated_at = data.get('updated_at')
+        if updated_at and isinstance(updated_at, str):
+            updated_at = datetime.fromisoformat(updated_at)
+
         return HelloWorldReadModel(
             id=data['id'],
             greeting=data['greeting'],
-            created_at=data.get('created_at'),
-            updated_at=data.get('updated_at')
+            created_at=created_at,
+            updated_at=updated_at
         )
