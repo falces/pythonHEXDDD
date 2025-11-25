@@ -15,10 +15,10 @@ class GetAllHelloWorldUseCase:
     def execute(self) -> List[dict]:
         # 1. Crear query
         query = GetAllHelloWorldQuery()
-        
+
         # 2. Ejecutar query a través del QueryBus
         result = self.query_bus.dispatch(query)
-        
+
         # 3. Retornar lista serializada desde los read models
         # result es List[HelloWorldReadModel]
         return [item.to_dict() for item in result]

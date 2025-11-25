@@ -64,6 +64,48 @@ tests/
 
 ## Ejecutar Tests
 
+### Resumen de comandos
+
+Para ejecutar todos los tests, puedes usar:
+
+```bash
+python -m pytest tests/ -v
+```
+
+**Variantes útiles:**
+
+```bash
+# Todos los tests con resumen corto
+python -m pytest tests/
+
+# Solo mostrar el resumen (más rápido de leer)
+python -m pytest tests/ -q
+
+# Con coverage
+python -m pytest tests/ --cov=app --cov-report=html
+
+# Solo tests de integración
+python -m pytest tests/integration/ -v
+
+# Solo tests unitarios
+python -m pytest tests/unit/ -v
+
+# Detener en el primer fallo
+python -m pytest tests/ -x
+
+# Solo los tests que fallaron en la última ejecución
+python -m pytest tests/ --lf
+```
+
+Comando más completo:
+
+```bash
+python -m pytest tests/ -v --tb=short
+```
+
+- `-v` = verbose (muestra cada test)
+- `--tb=short` = tracebacks cortos (más legibles)
+
 ### Todos los Tests
 
 ```bash

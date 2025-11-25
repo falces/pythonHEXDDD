@@ -33,7 +33,7 @@ class TestHelloWorldRepositoryIntegration:
             found_entity = read_repo.find_by_id(saved_entity.id)
             assert found_entity is not None
             assert found_entity.id == saved_entity.id
-            assert found_entity.greeting.value == "Integration Test"
+            assert found_entity.greeting == "Integration Test"
 
     def test_save_multiple_entities(self, app, db_session):
         """Debería guardar múltiples entidades."""
@@ -56,7 +56,7 @@ class TestHelloWorldRepositoryIntegration:
             # Assert - Verificar con Read Repository
             all_entities = read_repo.find_all()
             assert len(all_entities) >= 2
-            greetings = [e.greeting.value for e in all_entities]
+            greetings = [e.greeting for e in all_entities]
             assert "First" in greetings
             assert "Second" in greetings
 
@@ -115,7 +115,7 @@ class TestHelloWorldRepositoryIntegration:
 
             # Assert - Verificar con Read Repository
             found = read_repo.find_by_id(original_id)
-            assert found.greeting.value == "Updated"
+            assert found.greeting == "Updated"
 
     def test_multiple_saves_in_transaction(self, app, db_session):
         """Debería manejar múltiples guardados en una transacción."""

@@ -26,5 +26,5 @@ class HelloWorldSerializer:
 
         return {
             "id": entity.id,
-            "greeting": entity.greeting,
+            "greeting": entity.greeting.value,
         }

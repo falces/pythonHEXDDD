@@ -373,8 +373,8 @@ def test_dispatch_calls_correct_handler():
 ### Endpoints a Migrar
 
 - ✅ **POST /api/v1/hello-world/** - Migrado a CQRS
+- ✅ **DELETE /api/v1/hello-world/{id}** - Migrado a CQRS (Use Case usa CommandBus)
 - 🔄 **PUT /api/v1/hello-world/{id}** - Usar UpdateHelloWorldCommand (ya existe)
-- 🔄 **DELETE /api/v1/hello-world/{id}** - Usar DeleteHelloWorldCommand (ya existe)
 
 ### Queries (Ya implementados)
 
@@ -384,6 +384,20 @@ def test_dispatch_calls_correct_handler():
 ---
 
 ## 📝 Correcciones Adicionales
+
+### Use Cases como Adaptadores
+
+Los Use Cases antiguos (`CreateHelloWorldUseCase`, `DeleteHelloWorldUseCase`) se han mantenido pero refactorizado para actuar como adaptadores que usan el `CommandBus` internamente. Esto permite mantener la compatibilidad con los controladores existentes mientras se migra la lógica real a los Command Handlers.
+
+```python
+class CreateHelloWorldUseCase:
+    def __init__(self, command_bus):
+        self.command_bus = command_bus
+
+    def execute(self, greeting_text):
+        command = CreateHelloWorldCommand(greeting_text)
+        return self.command_bus.dispatch(command)
+```
 
 ### Imports Circulares Corregidos
 

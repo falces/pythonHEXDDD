@@ -9,66 +9,51 @@ from Application.UseCases.HelloWorld.GetAllHelloWorldUseCase import GetAllHelloW
 from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
 from Application.ReadModels.HelloWorldListReadModel import HelloWorldListReadModel
 from Application.UseCases.HelloWorld.GetHelloWorldByIdUseCase import GetHelloWorldByIdUseCase
-from Application.UseCases.HelloWorld.DeleteHelloWorldUseCase import DeleteHelloWorldUseCase
+from Application.Commands.CreateHelloWorldCommand import CreateHelloWorldCommand
+from Application.Commands.DeleteHelloWorldCommand import DeleteHelloWorldCommand
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Domain.HelloWorld.Exceptions.IncorrectGreetingException import IncorrectGreetingException
+from Application.UseCases.HelloWorld.DeleteHelloWorldUseCase import DeleteHelloWorldUseCase
 
 
 class TestCreateHelloWorldUseCase:
-    """Tests para CreateHelloWorldUseCase."""
+    """Tests para CreateHelloWorldUseCase (Refactorizado CQRS)."""
 
-    def test_create_hello_world_success(self, mock_repository, mock_event_dispatcher):
-        """Debería crear un HelloWorld exitosamente."""
+    def test_create_hello_world_success(self):
+        """Debería crear un comando y despacharlo al bus."""
         # Arrange
-        use_case = CreateHelloWorldUseCase(
-            mock_repository, mock_event_dispatcher)
+        mock_command_bus = Mock()
+        mock_command_bus.dispatch.return_value = 123  # ID retornado por el handler
 
-        # Mock del repository.save() para retornar entidad con ID
-        def save_side_effect(entity):
-            entity._id = 123
-            return entity
-        mock_repository.save.side_effect = save_side_effect
+        use_case = CreateHelloWorldUseCase(mock_command_bus)
 
         # Act
         result = use_case.execute("Hello World")
 
         # Assert
-        assert result['greeting'] == "Hello World"
-        mock_repository.save.assert_called_once()
-        mock_event_dispatcher.publish_multiple.assert_called_once()
+        # Verifica que se retorna el formato esperado por el controlador
+        assert result == {"id": 123, "greeting": "Hello World"}
 
-    def test_create_hello_world_with_invalid_greeting_raises_exception(
-        self, mock_repository, mock_event_dispatcher
-    ):
-        """Debería lanzar excepción con greeting inválido."""
+        # Verifica que se despachó el comando correcto
+        mock_command_bus.dispatch.assert_called_once()
+        args = mock_command_bus.dispatch.call_args[0]
+        command = args[0]
+        assert isinstance(command, CreateHelloWorldCommand)
+        assert command.greeting_text == "Hello World"
+
+    def test_create_propagates_exceptions(self):
+        """Debería propagar excepciones lanzadas por el handler."""
         # Arrange
-        use_case = CreateHelloWorldUseCase(
-            mock_repository, mock_event_dispatcher)
+        mock_command_bus = Mock()
+        mock_command_bus.dispatch.side_effect = IncorrectGreetingException(
+            "Invalid")
+
+        use_case = CreateHelloWorldUseCase(mock_command_bus)
 
         # Act & Assert
         with pytest.raises(IncorrectGreetingException):
             use_case.execute("")
-
-    def test_create_hello_world_publishes_event(self, mock_repository, mock_event_dispatcher):
-        """Debería publicar evento después de crear."""
-        # Arrange
-        use_case = CreateHelloWorldUseCase(
-            mock_repository, mock_event_dispatcher)
-
-        def save_side_effect(entity):
-            entity._id = 999
-            return entity
-        mock_repository.save.side_effect = save_side_effect
-
-        # Act
-        use_case.execute("Test")
-
-        # Assert
-        mock_event_dispatcher.publish_multiple.assert_called_once()
-        published_events = mock_event_dispatcher.publish_multiple.call_args[0][0]
-        assert len(published_events) > 0
-        assert published_events[0].hello_world_id == 999
 
 
 class TestGetAllHelloWorldUseCase:
@@ -117,14 +102,17 @@ class TestGetAllHelloWorldUseCase:
 class TestGetHelloWorldByIdUseCase:
     """Tests para GetHelloWorldByIdUseCase."""
 
-    def test_get_by_id_returns_hello_world_when_exists(self, mock_repository):
+    def test_get_by_id_returns_hello_world_when_exists(self):
         """Debería retornar HelloWorld cuando existe."""
         # Arrange
-        greeting = GreetingValueObject.create("Found")
-        entity = HelloWorld(greeting=greeting, id=123)
+        from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
+        from Application.Queries.GetHelloWorldByIdQuery import GetHelloWorldByIdQuery
 
-        mock_repository.find_by_id.return_value = entity
-        use_case = GetHelloWorldByIdUseCase(mock_repository)
+        mock_query_bus = Mock()
+        read_model = HelloWorldReadModel(id=123, greeting="Found")
+        mock_query_bus.dispatch.return_value = read_model
+
+        use_case = GetHelloWorldByIdUseCase(mock_query_bus)
 
         # Act
         result = use_case.execute(123)
@@ -132,80 +120,63 @@ class TestGetHelloWorldByIdUseCase:
         # Assert
         assert result is not None
         assert result['greeting'] == "Found"
-        mock_repository.find_by_id.assert_called_once_with(123)
+        mock_query_bus.dispatch.assert_called_once_with(
+            GetHelloWorldByIdQuery(id=123))
 
-    def test_get_by_id_returns_none_when_not_exists(self, mock_repository):
+    def test_get_by_id_returns_none_when_not_exists(self):
         """Debería retornar None cuando no existe."""
         # Arrange
-        mock_repository.find_by_id.return_value = None
-        use_case = GetHelloWorldByIdUseCase(mock_repository)
+        from Application.Queries.GetHelloWorldByIdQuery import GetHelloWorldByIdQuery
+
+        mock_query_bus = Mock()
+        mock_query_bus.dispatch.return_value = None
+
+        use_case = GetHelloWorldByIdUseCase(mock_query_bus)
 
         # Act
         result = use_case.execute(999)
 
         # Assert
         assert result is None
-        mock_repository.find_by_id.assert_called_once_with(999)
+        mock_query_bus.dispatch.assert_called_once_with(
+            GetHelloWorldByIdQuery(id=999))
 
 
 class TestDeleteHelloWorldUseCase:
-    """Tests para DeleteHelloWorldUseCase."""
+    """Tests para DeleteHelloWorldUseCase (Refactorizado CQRS)."""
 
-    def test_delete_returns_true_when_exists(
-        self, mock_repository, mock_event_dispatcher
-    ):
-        """Debería retornar True cuando se elimina exitosamente."""
+    def test_delete_returns_true_when_exists(self):
+        """Debería retornar True cuando el bus confirma eliminación."""
         # Arrange
-        greeting = GreetingValueObject.create("To Delete")
-        entity = HelloWorld(greeting=greeting, id=456)
+        mock_command_bus = Mock()
+        mock_command_bus.dispatch.return_value = True
 
-        mock_repository.find_by_id.return_value = entity
-        mock_repository.delete.return_value = True
-
-        use_case = DeleteHelloWorldUseCase(
-            mock_repository, mock_event_dispatcher)
+        use_case = DeleteHelloWorldUseCase(mock_command_bus)
 
         # Act
         result = use_case.execute(456)
 
         # Assert
         assert result is True
-        mock_repository.delete.assert_called_once_with(456)
-        mock_event_dispatcher.publish.assert_called_once()
+        mock_command_bus.dispatch.assert_called_once()
 
-    def test_delete_returns_false_when_not_exists(
-        self, mock_repository, mock_event_dispatcher
-    ):
-        """Debería retornar False cuando no existe."""
+        # Verificar comando
+        args = mock_command_bus.dispatch.call_args[0]
+        command = args[0]
+        assert isinstance(command, DeleteHelloWorldCommand)
+        assert command.id == 456
+
+    def test_delete_returns_false_when_not_exists(self):
+        """Debería retornar False cuando el bus indica fallo."""
         # Arrange
-        mock_repository.delete.return_value = False
-        use_case = DeleteHelloWorldUseCase(
-            mock_repository, mock_event_dispatcher)
+        mock_command_bus = Mock()
+        mock_command_bus.dispatch.return_value = False
+
+        use_case = DeleteHelloWorldUseCase(mock_command_bus)
 
         # Act
         result = use_case.execute(999)
 
         # Assert
         assert result is False
-        mock_repository.delete.assert_called_once_with(999)
-        mock_event_dispatcher.publish.assert_not_called()
-
-    def test_delete_publishes_event(self, mock_repository, mock_event_dispatcher):
-        """Debería publicar evento al eliminar."""
-        # Arrange
-        greeting = GreetingValueObject.create("Delete Me")
-        entity = HelloWorld(greeting=greeting, id=789)
-
-        mock_repository.find_by_id.return_value = entity
-        mock_repository.delete.return_value = True
-
-        use_case = DeleteHelloWorldUseCase(
-            mock_repository, mock_event_dispatcher)
-
-        # Act
-        use_case.execute(789)
-
-        # Assert
-        mock_event_dispatcher.publish.assert_called_once()
-        published_event = mock_event_dispatcher.publish.call_args[0][0]
-        assert published_event.hello_world_id == 789
+        mock_command_bus.dispatch.assert_called_once()

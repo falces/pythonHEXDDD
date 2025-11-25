@@ -58,25 +58,23 @@
 └────────────────────────────┼─────────────────────────────────────┘
                              │
           ┌──────────────────▼──────────────────┐
-          │   1. repository = Repository()      │
-          │   2. service = Service(repository)  │
-          │   3. result = service.execute()     │
+          │   CQRS Pattern                      │
+          │   1. Command/Query = Data()         │
+          │   2. Bus = container.bus()          │
+          │   3. result = bus.dispatch(msg)     │
           └──────────────────┬──────────────────┘
                              │
 ┌────────────────────────────▼─────────────────────────────────────┐
 │                      Application Layer                           │
 │  ┌────────────────────────────────────────────────────────┐     │
-│  │ HelloWorldService                                      │     │
-│  │  __init__(repository: HelloWorldRepositoryInterface)   │     │
-│  │                                                         │     │
-│  │  + getAllHelloWorld() → list[dict]                     │     │
-│  │  + addHelloWorld(dto) → dict                           │     │
+│  │ Command/Query Handlers                                 │     │
+│  │  handle(command/query)                                 │     │
 │  │                                                         │     │
 │  │  Orquesta:                                             │     │
 │  │  - Crea Value Objects (Greeting)                       │     │
 │  │  - Crea Entidades (HelloWorld)                         │     │
 │  │  - Llama Repository (Interface)                        │     │
-│  │  - Usa Mapper para serializar                          │     │
+│  │  - Publica Eventos de Dominio                          │     │
 │  └───────────────┬────────────────┬───────────────────────┘     │
 └──────────────────┼────────────────┼─────────────────────────────┘
                    │                │
@@ -155,36 +153,45 @@
 
 ## Flujo de Datos Completo
 
-### **1. Crear un HelloWorld (POST)**
+### **1. Crear un HelloWorld (POST) - CQRS**
 
 ```
 HTTP POST /api/v1/hello-world/
-{ "name": "Hola Mundo" }
+{ "greeting": "Hola Mundo" }
          │
          ▼
 ┌────────────────────────────────────┐
 │ HelloWorldController               │
 │  1. data = request.get_json()      │
-│  2. dto = GreetingDTO(data['name'])│
-│  3. repo = HelloWorldRepository()  │
-│  4. service = Service(repo)        │
-│  5. service.addHelloWorld(dto)     │
+│  2. cmd = CreateHelloWorldCommand( │
+│       greeting_text=data['greeting']│
+│     )                              │
+│  3. bus = container.command_bus()  │
+│  4. id = bus.dispatch(cmd)         │
 └────────┬───────────────────────────┘
          │
          ▼
 ┌────────────────────────────────────┐
-│ HelloWorldService                  │
+│ CommandBus                         │
+│  1. handler = handlers[type(cmd)]  │
+│  2. return handler.handle(cmd)     │
+└────────┬───────────────────────────┘
+         │
+         ▼
+┌────────────────────────────────────┐
+│ CreateHelloWorldHandler            │
 │  1. greeting = Greeting.create()   │ ← Value Object (Domain)
 │  2. entity = HelloWorld(greeting)  │ ← Entity (Domain)
 │  3. saved = repo.save(entity)      │ → Llama a Infrastructure
-│  4. return Mapper.toDict(saved)    │
+│  4. events.publish(saved.events)   │
+│  5. return saved.id                │
 └────────┬───────────────────────────┘
          │
          ▼
 ┌────────────────────────────────────┐
-│ HelloWorldRepository               │
+│ HelloWorldWriteRepository          │
 │  1. model = Mapper.toModel(entity) │ ← Domain → Persistence
-│  2. db.session.add(model)          │
+│  2. db.session.merge(model)        │
 │  3. db.session.commit()            │
 │  4. return Mapper.toDomain(model)  │ ← Persistence → Domain
 └────────┬───────────────────────────┘

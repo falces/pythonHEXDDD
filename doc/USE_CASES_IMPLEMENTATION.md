@@ -86,21 +86,13 @@ class CreateHelloWorldUseCase:
     """
     Responsabilidad única: Crear un HelloWorld
     """
-    def __init__(self, repository):
-        self.repository = repository
+    def __init__(self, command_bus):
+        self.command_bus = command_bus
     
     def execute(self, greeting_text: str) -> dict:
-        # 1. Crear Value Object (validaciones)
-        greeting = Greeting.create(greeting_text)
-        
-        # 2. Crear entidad de dominio
-        hello_world = HelloWorld(greeting=greeting)
-        
-        # 3. Persistir
-        saved = self.repository.save(hello_world)
-        
-        # 4. Serializar y retornar
-        return HelloWorldSerializer.to_dict(saved)
+        command = CreateHelloWorldCommand(greeting_text=greeting_text)
+        entity_id = self.command_bus.dispatch(command)
+        return {"id": entity_id, "greeting": greeting_text}
 
 
 # GetAllHelloWorldUseCase.py
@@ -121,12 +113,13 @@ class GetHelloWorldByIdUseCase:
     """
     Responsabilidad única: Obtener un HelloWorld por ID
     """
-    def __init__(self, repository):
-        self.repository = repository
+    def __init__(self, query_bus):
+        self.query_bus = query_bus
     
     def execute(self, id: int) -> Optional[dict]:
-        entity = self.repository.find_by_id(id)
-        return HelloWorldSerializer.to_dict(entity) if entity else None
+        query = GetHelloWorldByIdQuery(id=id)
+        result = self.query_bus.dispatch(query)
+        return result.to_dict() if result else None
 
 
 # DeleteHelloWorldUseCase.py
@@ -134,20 +127,12 @@ class DeleteHelloWorldUseCase:
     """
     Responsabilidad única: Eliminar un HelloWorld
     """
-    def __init__(self, repository, event_dispatcher):
-        self.repository = repository
-        self.event_dispatcher = event_dispatcher
+    def __init__(self, command_bus):
+        self.command_bus = command_bus
     
     def execute(self, id: int) -> bool:
-        # Eliminar usando el repositorio
-        deleted = self.repository.delete(id)
-        
-        # Si se eliminó correctamente, publicar evento
-        if deleted:
-            event = HelloWorldDeleted(hello_world_id=id)
-            self.event_dispatcher.publish(event)
-        
-        return deleted
+        command = DeleteHelloWorldCommand(id=id)
+        return self.command_bus.dispatch(command)
 ```
 
 **Beneficios:**
@@ -219,10 +204,10 @@ def get_all_hello_world():
 
 | Use Case | Responsabilidad | Entrada | Salida | Estado |
 |----------|----------------|---------|--------|--------|
-| `CreateHelloWorldUseCase` | ~~Crear nuevo HelloWorld~~ | `greeting_text: str` | `dict` | ⚠️ **Deprecated** - Usar `CreateHelloWorldHandler` + `CommandBus` |
+| `CreateHelloWorldUseCase` | Crear nuevo HelloWorld (usa CommandBus) | `greeting_text: str` | `dict` | ✅ Activo |
 | `GetAllHelloWorldUseCase` | Listar todos (usa QueryBus) | - | `List[dict]` | ✅ Activo |
-| `GetHelloWorldByIdUseCase` | Obtener por ID | `id: int` | `Optional[dict]` | ✅ Activo |
-| `DeleteHelloWorldUseCase` | Eliminar por ID | `id: int` | `bool` | ✅ Activo |
+| `GetHelloWorldByIdUseCase` | Obtener por ID (usa QueryBus) | `id: int` | `Optional[dict]` | ✅ Activo |
+| `DeleteHelloWorldUseCase` | Eliminar por ID (usa CommandBus) | `id: int` | `bool` | ✅ Activo |
 
 ### **Shows/Movies (2 casos de uso)**
 
@@ -246,22 +231,22 @@ class Container(containers.DeclarativeContainer):
     
     create_hello_world_use_case = providers.Factory(
         CreateHelloWorldUseCase,
-        repository=hello_world_repository
+        command_bus=command_bus
     )
     
     get_all_hello_world_use_case = providers.Factory(
         GetAllHelloWorldUseCase,
-        repository=hello_world_repository
+        query_bus=query_bus
     )
     
     get_hello_world_by_id_use_case = providers.Factory(
         GetHelloWorldByIdUseCase,
-        repository=hello_world_repository
+        query_bus=query_bus
     )
     
     delete_hello_world_use_case = providers.Factory(
         DeleteHelloWorldUseCase,
-        repository=hello_world_repository
+        command_bus=command_bus
     )
     
     # ========== USE CASES - SHOWS ==========

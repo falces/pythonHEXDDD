@@ -1,39 +1,25 @@
-from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Domain.HelloWorld.Events.HelloWorldDeleted import HelloWorldDeleted
-from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
+from Shared.Application.CommandBus import CommandBus
+from Application.Commands.DeleteHelloWorldCommand import DeleteHelloWorldCommand
 
 
 class DeleteHelloWorldUseCase:
     """
     Caso de Uso: Eliminar un HelloWorld por su ID.
-    
-    Responsabilidades:
-    - Validar que el ID sea válido
-    - Eliminar la entidad del repositorio
-    - Publicar eventos de dominio
-    - Retornar el resultado de la operación
+    Refactorizado para usar CommandBus (CQRS).
     """
-    
-    def __init__(self, repository: HelloWorldRepositoryInterface, event_dispatcher: EventDispatcherInterface):
-        self.repository = repository
-        self.event_dispatcher = event_dispatcher
-    
+
+    def __init__(self, command_bus: CommandBus):
+        self.command_bus = command_bus
+
     def execute(self, hello_world_id: int) -> bool:
         """
-        Ejecuta el caso de uso de eliminar un HelloWorld.
-        
+        Ejecuta el caso de uso despachando un comando de eliminación.
+
         Args:
             hello_world_id: ID del HelloWorld a eliminar
-            
+
         Returns:
             bool: True si se eliminó correctamente, False si no existía
         """
-        # Eliminar usando el repositorio
-        deleted = self.repository.delete(hello_world_id)
-        
-        # Si se eliminó correctamente, publicar evento
-        if deleted:
-            event = HelloWorldDeleted(hello_world_id=hello_world_id)
-            self.event_dispatcher.publish(event)
-        
-        return deleted
+        command = DeleteHelloWorldCommand(id=hello_world_id)
+        return self.command_bus.dispatch(command)
