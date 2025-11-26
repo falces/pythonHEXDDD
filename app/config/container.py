@@ -30,12 +30,6 @@ from Application.QueryHandlers.GetAllHelloWorldHandler import GetAllHelloWorldHa
 from Application.QueryHandlers.GetHelloWorldByIdHandler import GetHelloWorldByIdHandler
 from Application.QueryHandlers.SearchHelloWorldHandler import SearchHelloWorldHandler
 
-# Use Cases - HelloWorld (legacy, mantener por compatibilidad)
-from Application.UseCases.HelloWorld.CreateHelloWorldUseCase import CreateHelloWorldUseCase
-from Application.UseCases.HelloWorld.GetAllHelloWorldUseCase import GetAllHelloWorldUseCase
-from Application.UseCases.HelloWorld.GetHelloWorldByIdUseCase import GetHelloWorldByIdUseCase
-from Application.UseCases.HelloWorld.DeleteHelloWorldUseCase import DeleteHelloWorldUseCase
-
 # Use Cases - Shows
 from Application.UseCases.Shows.SearchShowsUseCase import SearchShowsUseCase
 from Application.UseCases.Shows.GetShowByIdUseCase import GetShowByIdUseCase
@@ -161,27 +155,7 @@ class Container(containers.DeclarativeContainer):
         repository=shows_repository
     )
 
-    # ========== USE CASES ==========
-
-    create_hello_world_use_case = providers.Factory(
-        CreateHelloWorldUseCase,
-        command_bus=command_bus
-    )
-
-    get_all_hello_world_use_case = providers.Factory(
-        GetAllHelloWorldUseCase,
-        query_bus=query_bus
-    )
-
-    get_hello_world_by_id_use_case = providers.Factory(
-        GetHelloWorldByIdUseCase,
-        query_bus=query_bus
-    )
-
-    delete_hello_world_use_case = providers.Factory(
-        DeleteHelloWorldUseCase,
-        command_bus=command_bus
-    )
+    # ========== USE CASES - SHOWS ==========
 
     search_shows_use_case = providers.Factory(
         SearchShowsUseCase,

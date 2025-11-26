@@ -2,6 +2,9 @@ from flask import Blueprint, request, current_app
 from Infrastructure.Controller.ControllerBase import ControllerBase
 from Domain.HelloWorld.Exceptions.IncorrectGreetingException import IncorrectGreetingException
 from Application.Commands.CreateHelloWorldCommand import CreateHelloWorldCommand
+from Application.Commands.DeleteHelloWorldCommand import DeleteHelloWorldCommand
+from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
+from Application.Queries.GetHelloWorldByIdQuery import GetHelloWorldByIdQuery
 
 
 hello_world_controller = Blueprint('helloWorldController', __name__)
@@ -10,7 +13,7 @@ hello_world_controller = Blueprint('helloWorldController', __name__)
 class HelloWorldController:
     """
     Controlador para las operaciones de HelloWorld.
-    Usa el DI Container para obtener casos de uso.
+    Usa CQRS puro: CommandBus para escrituras, QueryBus para lecturas.
     """
 
     @hello_world_controller.route('/', methods=['GET'])
@@ -19,12 +22,25 @@ class HelloWorldController:
         Obtiene todos los HelloWorld registrados.
 
         GET /api/v1/hello-world/
+        Query params: limit, offset, sort_by, sort_order
         """
-        # Obtener caso de uso desde el container
-        use_case = current_app.container.get_all_hello_world_use_case()
+        # Obtener parámetros de paginación/ordenamiento
+        limit = request.args.get('limit', type=int)
+        offset = request.args.get('offset', type=int)
+        sort_by = request.args.get('sort_by', default='id')
+        sort_order = request.args.get('sort_order', default='asc')
 
-        # Ejecutar el caso de uso
-        result = use_case.execute()
+        # Crear Query
+        query = GetAllHelloWorldQuery(
+            limit=limit,
+            offset=offset,
+            sort_by=sort_by,
+            sort_order=sort_order
+        )
+
+        # Obtener QueryBus y despachar
+        query_bus = current_app.container.query_bus()
+        result = query_bus.dispatch(query)
 
         return ControllerBase.format_response(result, 200)
 
@@ -53,17 +69,15 @@ class HelloWorldController:
                 greeting_text=data['greeting']
             )
 
-            # Obtener el Command Bus desde el container
+            # Obtener el Command Bus y despachar
             command_bus = current_app.container.command_bus()
-
-            # Despachar el comando al handler correspondiente
             entity_id = command_bus.dispatch(command)
 
-            # Obtener la entidad creada para retornar el valor procesado
-            get_use_case = current_app.container.get_hello_world_by_id_use_case()
-            created_entity = get_use_case.execute(entity_id)
+            # Usar QueryBus para obtener la entidad creada
+            query = GetHelloWorldByIdQuery(id=entity_id)
+            query_bus = current_app.container.query_bus()
+            created_entity = query_bus.dispatch(query)
 
-            # Retornar la entidad creada (con greeting procesado/trimmed)
             return ControllerBase.format_response(
                 created_entity,
                 201
@@ -85,11 +99,12 @@ class HelloWorldController:
 
         GET /api/v1/hello-world/{id}
         """
-        # Obtener caso de uso desde el container
-        use_case = current_app.container.get_hello_world_by_id_use_case()
+        # Crear Query
+        query = GetHelloWorldByIdQuery(id=id)
 
-        # Ejecutar caso de uso
-        result = use_case.execute(id)
+        # Obtener QueryBus y despachar
+        query_bus = current_app.container.query_bus()
+        result = query_bus.dispatch(query)
 
         if result is None:
             return ControllerBase.format_response(
@@ -106,17 +121,21 @@ class HelloWorldController:
 
         DELETE /api/v1/hello-world/{id}
         """
-        # Obtener caso de uso desde el container
-        use_case = current_app.container.delete_hello_world_use_case()
+        # Verificar que existe antes de eliminar
+        query = GetHelloWorldByIdQuery(id=id)
+        query_bus = current_app.container.query_bus()
+        existing = query_bus.dispatch(query)
 
-        # Ejecutar caso de uso
-        deleted = use_case.execute(id)
-
-        if not deleted:
+        if existing is None:
             return ControllerBase.format_response(
                 {"error": "HelloWorld not found"},
                 404
             )
+
+        # Crear Comando y despachar
+        command = DeleteHelloWorldCommand(id=id)
+        command_bus = current_app.container.command_bus()
+        command_bus.dispatch(command)
 
         return ControllerBase.format_response(
             {"message": "HelloWorld deleted successfully"},

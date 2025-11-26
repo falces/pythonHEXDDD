@@ -82,6 +82,9 @@ CreateHelloWorldHandler : CommandHandler (ABC)
     │
     ▼
 return entity_id (int)
+    │
+    ▼
+Controller consulta QueryBus para obtener datos completos (opcional)
 ```
 
 ### Queries (Lectura)
@@ -184,7 +187,10 @@ app/
 │   ├── EventHandlers/              # Manejadores de eventos de dominio
 │   │   ├── HelloWorldCreatedLogger.py
 │   │   └── HelloWorldDeletedLogger.py
-│   └── UseCases/                   # [Legacy] Adaptadores a CQRS
+│   └── UseCases/                   # Use Cases (solo para módulos sin CQRS)
+│       └── Shows/                  # Shows aún usa Use Cases tradicionales
+│           ├── SearchShowsUseCase.py
+│           └── GetShowByIdUseCase.py
 │
 ├── Domain/                         # Capa de Dominio (PURO)
 │   ├── HelloWorld/

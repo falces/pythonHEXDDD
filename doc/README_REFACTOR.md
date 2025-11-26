@@ -15,10 +15,14 @@ Este repositorio implementa una **API REST con Flask** siguiendo los principios 
 app/
 ├── Domain/                           # ⚡ Capa de Dominio (Lógica de Negocio Pura)
 │   ├── HelloWorld/
-│   │   ├── HelloWorld.py            # Entidad agregada
-│   │   ├── HelloWorldRepositoryInterface.py
+│   │   ├── HelloWorld.py            # Entidad agregada (Aggregate Root)
+│   │   ├── HelloWorldRepositoryInterface.py  # Puerto Write
+│   │   ├── HelloWorldReadRepositoryInterface.py  # Puerto Read (CQRS)
+│   │   ├── Events/                  # Domain Events
+│   │   │   ├── HelloWorldCreated.py
+│   │   │   └── HelloWorldDeleted.py
 │   │   └── ValueObjects/
-│   │       └── Greeting.py
+│   │       └── GreetingValueObject.py
 │   └── Show/
 │       ├── Show.py                  # Entidad agregada
 │       ├── ShowRepositoryInterface.py
@@ -28,11 +32,33 @@ app/
 │           ├── ShowType.py
 │           └── StreamingOption.py
 │
-├── Application/                      # 🔄 Capa de Aplicación (Casos de Uso)
-│   ├── HelloWorldService.py
-│   ├── MoviesService.py
-│   └── DTO/
-│       └── GreetingDTO.py
+├── Application/                      # 🔄 Capa de Aplicación (CQRS)
+│   ├── Commands/                    # Comandos inmutables
+│   │   ├── CreateHelloWorldCommand.py
+│   │   ├── UpdateHelloWorldCommand.py
+│   │   └── DeleteHelloWorldCommand.py
+│   ├── CommandHandlers/             # Handlers de comandos
+│   │   ├── CreateHelloWorldHandler.py
+│   │   ├── UpdateHelloWorldHandler.py
+│   │   └── DeleteHelloWorldHandler.py
+│   ├── Queries/                     # Queries inmutables
+│   │   ├── GetAllHelloWorldQuery.py
+│   │   ├── GetHelloWorldByIdQuery.py
+│   │   └── SearchHelloWorldQuery.py
+│   ├── QueryHandlers/               # Handlers de queries
+│   │   ├── GetAllHelloWorldHandler.py
+│   │   ├── GetHelloWorldByIdHandler.py
+│   │   └── SearchHelloWorldHandler.py
+│   ├── ReadModels/                  # DTOs de lectura
+│   │   └── HelloWorldReadModel.py
+│   ├── EventHandlers/               # Handlers de eventos de dominio
+│   │   ├── HelloWorldCreatedLogger.py
+│   │   └── HelloWorldDeletedLogger.py
+│   ├── MoviesService.py             # Servicio para Shows (legacy)
+│   └── UseCases/
+│       └── Shows/                   # Use Cases tradicionales
+│           ├── SearchShowsUseCase.py
+│           └── GetShowByIdUseCase.py
 │
 ├── Infrastructure/                   # 🔌 Capa de Infraestructura (Adaptadores)
 │   ├── Persistence/
@@ -48,20 +74,37 @@ app/
 │   │       └── ShowMapper.py        # Domain ↔ API
 │   │
 │   ├── Repository/
-│   │   ├── HelloWorldRepository.py  # Implementación SQLAlchemy
-│   │   └── ShowsRepository.py       # Implementación API externa
+│   │   ├── HelloWorldWriteRepository.py  # Impl. Write (CQRS)
+│   │   ├── HelloWorldReadRepository.py   # Impl. Read (CQRS)
+│   │   └── ShowsAPIRepository.py         # Implementación API externa
+│   │
+│   ├── Projections/                 # Proyecciones CQRS
+│   │   └── HelloWorldProjection.py
 │   │
 │   └── Controller/
-│       ├── HelloWorldController.py
+│       ├── HelloWorldController.py  # Usa CommandBus/QueryBus
 │       └── MoviesController.py
 │
-└── Shared/                          # 🔧 Componentes compartidos
-    ├── Domain/
-    │   ├── Entities/EntityBase.py
-    │   ├── Repositories/AbstractRepository.py
-    │   └── ValueObjects/
-    └── Infrastructure/
-        └── APITools.py
+├── Shared/                          # 🔧 Componentes compartidos
+│   ├── Application/
+│   │   ├── CommandBus.py            # Bus de comandos
+│   │   ├── QueryBus.py              # Bus de queries
+│   │   ├── CommandHandler.py        # Interface ABC
+│   │   └── QueryHandler.py          # Interface ABC
+│   ├── Domain/
+│   │   ├── Entities/
+│   │   │   └── EntityBase.py        # AggregateRootBase
+│   │   ├── Events/
+│   │   │   ├── DomainEvent.py
+│   │   │   └── EventDispatcherInterface.py
+│   │   └── ValueObjects/
+│   └── Infrastructure/
+│       ├── Events/
+│       │   └── EventDispatcher.py
+│       └── APITools.py
+│
+└── config/
+    └── container.py                 # DI Container
 ```
 
 ---

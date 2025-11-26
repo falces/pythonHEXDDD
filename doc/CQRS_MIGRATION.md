@@ -1,137 +1,163 @@
-# Migración a CQRS - Flujo POST CreateHelloWorld
+# CQRS - Implementación Completa
 
 ## 📋 Resumen
 
-El endpoint `POST /api/v1/hello-world/` ha sido refactorizado para usar el patrón **CQRS completo** con **Command Bus**, abandonando el uso directo de Use Cases.
+El módulo **HelloWorld** implementa CQRS puro donde el Controller interactúa directamente con `CommandBus` y `QueryBus`, sin capas intermedias de Use Cases.
 
 ---
 
-## ✅ Cambios Realizados
+## ✅ Arquitectura CQRS Pura
 
-### Antes (Use Case directo)
+### Flujo de Escritura (Commands)
+
+```
+HTTP POST/PUT/DELETE /api/v1/hello-world/
+     ↓
+HelloWorldController
+     ↓
+CreateHelloWorldCommand (frozen dataclass)
+     ↓
+CommandBus.dispatch(command)
+     ↓ [busca handler por tipo de comando]
+CreateHelloWorldHandler
+     ├─→ GreetingValueObject.create()  [Domain validation]
+     ├─→ HelloWorld.create()           [Entity creation]
+     ├─→ WriteRepository.save()        [Persistence]
+     ├─→ entity.mark_as_created()      [Record event]
+     └─→ EventDispatcher.publish()     [Publish events]
+     ↓
+return entity_id (int)
+     ↓
+Controller usa QueryBus para obtener datos completos (opcional)
+     ↓
+HTTP Response 201 { "id": 1, "greeting": "Hello" }
+```
+
+### Flujo de Lectura (Queries)
+
+```
+HTTP GET /api/v1/hello-world/
+     ↓
+HelloWorldController
+     ↓
+GetAllHelloWorldQuery (frozen dataclass)
+     ↓
+QueryBus.dispatch(query)
+     ↓ [busca handler por tipo de query]
+GetAllHelloWorldHandler
+     └─→ ReadRepository.find_all()  [Optimized for reads]
+     ↓
+return List[HelloWorldReadModel]
+     ↓
+HTTP Response 200 [{ "id": 1, "greeting": "Hello" }, ...]
+```
+
+---
+
+## 🏗️ Implementación en Controller
+
+### GET - Listar todos (Query)
+
+```python
+@hello_world_controller.route('/', methods=['GET'])
+def get_all_hello_world():
+    # Parámetros de paginación opcionales
+    limit = request.args.get('limit', type=int)
+    offset = request.args.get('offset', type=int)
+    sort_by = request.args.get('sort_by', default='id')
+    sort_order = request.args.get('sort_order', default='asc')
+
+    # Crear Query inmutable
+    query = GetAllHelloWorldQuery(
+        limit=limit,
+        offset=offset,
+        sort_by=sort_by,
+        sort_order=sort_order
+    )
+
+    # Despachar al QueryBus
+    query_bus = current_app.container.query_bus()
+    result = query_bus.dispatch(query)
+
+    return ControllerBase.format_response(result, 200)
+```
+
+### POST - Crear (Command)
 
 ```python
 @hello_world_controller.route('/', methods=['POST'])
 def create_hello_world():
     data = request.get_json()
-    
-    # Obtener Use Case desde el container
-    use_case = current_app.container.create_hello_world_use_case()
-    
-    # Ejecutar Use Case directamente
-    result = use_case.execute(data['name'])
-    
-    return ControllerBase.format_response(result, 201)
-```
 
-**Flujo:**
-```
-Controller → CreateHelloWorldUseCase → Repository → Database
-```
-
-**Problemas:**
-- ❌ No sigue el patrón CQRS puro
-- ❌ Controller acoplado a implementación específica (Use Case)
-- ❌ Sin separación clara entre Commands y Queries
-- ❌ No aprovecha el Command Bus implementado
-
----
-
-### Después (CQRS con Command Bus)
-
-```python
-@hello_world_controller.route('/', methods=['POST'])
-def create_hello_world():
-    data = request.get_json()
-    
     if not data or 'greeting' not in data:
         return ControllerBase.format_response(
-            {"error": "Field 'greeting' is required"},
-            400
+            {"error": "Field 'greeting' is required"}, 400
         )
-    
-    # 1. Crear el comando CQRS (inmutable)
-    command = CreateHelloWorldCommand(
-        greeting_text=data['greeting']
-    )
-    
-    # 2. Obtener el Command Bus desde el container
+
+    # Crear Command inmutable
+    command = CreateHelloWorldCommand(greeting_text=data['greeting'])
+
+    # Despachar al CommandBus
     command_bus = current_app.container.command_bus()
-    
-    # 3. Despachar el comando al handler correspondiente
     entity_id = command_bus.dispatch(command)
-    
-    # 4. Retornar respuesta con el ID
+
+    # Obtener entidad creada via QueryBus
+    query = GetHelloWorldByIdQuery(id=entity_id)
+    query_bus = current_app.container.query_bus()
+    created_entity = query_bus.dispatch(query)
+
+    return ControllerBase.format_response(created_entity, 201)
+```
+
+### DELETE - Eliminar (Command)
+
+```python
+@hello_world_controller.route('/<int:id>', methods=['DELETE'])
+def delete_hello_world(id: int):
+    # Verificar existencia via Query
+    query = GetHelloWorldByIdQuery(id=id)
+    query_bus = current_app.container.query_bus()
+    existing = query_bus.dispatch(query)
+
+    if existing is None:
+        return ControllerBase.format_response(
+            {"error": "HelloWorld not found"}, 404
+        )
+
+    # Despachar comando de eliminación
+    command = DeleteHelloWorldCommand(id=id)
+    command_bus = current_app.container.command_bus()
+    command_bus.dispatch(command)
+
     return ControllerBase.format_response(
-        {"id": entity_id, "greeting": data['greeting']},
-        201
+        {"message": "HelloWorld deleted successfully"}, 200
     )
 ```
-
-**Flujo CQRS:**
-```
-Controller 
-   → CreateHelloWorldCommand 
-   → Command Bus 
-   → CreateHelloWorldHandler 
-   → Repository 
-   → Database
-```
-
-**Beneficios:**
-- ✅ Sigue el patrón CQRS puro
-- ✅ Controller desacoplado de la implementación
-- ✅ Separación clara: Commands (escritura) vs Queries (lectura)
-- ✅ Command Bus centraliza el despacho de comandos
-- ✅ Fácil agregar middleware (logging, validación, transacciones)
-- ✅ Testeable con mocks del Command Bus
 
 ---
 
-## 🏗️ Componentes CQRS
+## 🔷 Componentes CQRS
 
-### 1. Command (Comando Inmutable)
-
-**Archivo:** `app/Application/Commands/CreateHelloWorldCommand.py`
+### Commands (Inmutables)
 
 ```python
-from dataclasses import dataclass
-
+# Application/Commands/CreateHelloWorldCommand.py
 @dataclass(frozen=True)
 class CreateHelloWorldCommand:
-    """
-    Comando inmutable para crear un HelloWorld.
-    Representa la INTENCIÓN de crear una entidad.
-    """
+    """Comando inmutable para crear HelloWorld."""
     greeting_text: str
     
     def __post_init__(self):
-        """Validaciones básicas del comando."""
         if not isinstance(self.greeting_text, str):
             raise TypeError("greeting_text must be a string")
 ```
 
-**Características:**
-- Inmutable (`frozen=True`)
-- Sin lógica de negocio
-- Solo datos y validaciones básicas de tipo
-- Representa una intención, no una acción
-
----
-
-### 2. Command Handler (implementa CommandHandler ABC)
-
-**Archivo:** `app/Application/CommandHandlers/CreateHelloWorldHandler.py`
+### Command Handlers
 
 ```python
-from Shared.Application.CommandHandler import CommandHandler
-
+# Application/CommandHandlers/CreateHelloWorldHandler.py
 class CreateHelloWorldHandler(CommandHandler):
-    """
-    Maneja la creación de HelloWorld.
-    Encapsula la lógica de negocio para crear entidades.
-    Implementa la interfaz CommandHandler.
-    """
+    """Implementa CommandHandler ABC."""
     
     def __init__(
         self,
@@ -140,369 +166,197 @@ class CreateHelloWorldHandler(CommandHandler):
     ):
         self.write_repository = write_repository
         self.event_dispatcher = event_dispatcher
-    
+
     def handle(self, command: CreateHelloWorldCommand) -> int:
-        """
-        Procesa el comando de creación.
-        
-        Returns:
-            int: ID de la entidad creada
-        """
-        # 1. Crear Value Object (con validaciones de dominio)
+        # 1. Value Object con validación de dominio
         greeting = GreetingValueObject.create(command.greeting_text)
         
-        # 2. Crear entidad de dominio (registra eventos)
+        # 2. Crear entidad de dominio
         hello_world = HelloWorld.create(greeting=greeting)
         
-        # 3. Persistir a través del repositorio
-        saved_entity = self.repository.save(hello_world)
+        # 3. Persistir
+        saved_entity = self.write_repository.save(hello_world)
         
-        # 4. Marcar como creado para registrar el evento
+        # 4. Registrar evento
         saved_entity.mark_as_created(saved_entity.id)
         
-        # 5. Publicar eventos de dominio
+        # 5. Publicar eventos
         self.event_dispatcher.publish_multiple(
             saved_entity.pull_domain_events()
         )
         
-        # 6. Retornar solo el ID (sin exponer el modelo de dominio)
+        # 6. Retornar solo ID
         return saved_entity.id
 ```
 
-**Características:**
-- Contiene la lógica de negocio
-- Valida reglas de dominio
-- Publica eventos
-- Retorna solo el ID (no expone entidad completa)
-- Método estándar: `handle(command)`
-
----
-
-### 3. Command Bus (tipado con CommandHandler)
-
-**Archivo:** `app/Shared/Application/CommandBus.py`
+### Queries (Inmutables)
 
 ```python
-from Shared.Application.CommandHandler import CommandHandler
-
-class CommandBus:
-    """
-    Bus de comandos que despacha comandos a sus handlers.
-    Separa la invocación de comandos de su ejecución.
-    """
-    
-    def __init__(self):
-        self._handlers: Dict[Type, CommandHandler] = {}
-    
-    def register(self, command_type: Type, handler: CommandHandler) -> None:
-        """Registra un handler para un tipo de comando."""
-        if command_type in self._handlers:
-            raise ValueError(f"Handler already registered for {command_type.__name__}")
-        self._handlers[command_type] = handler
-    
-    def dispatch(self, command: Any) -> Any:
-        """
-        Despacha un comando a su handler correspondiente.
-        
-        Returns:
-            El resultado del handler
-        """
-        command_type = type(command)
-        
-        if command_type not in self._handlers:
-            raise ValueError(f"No handler registered for {command_type.__name__}")
-        
-        handler = self._handlers[command_type]
-        return handler.handle(command)
+# Application/Queries/GetAllHelloWorldQuery.py
+@dataclass(frozen=True)
+class GetAllHelloWorldQuery:
+    """Query inmutable para obtener todos."""
+    limit: Optional[int] = None
+    offset: Optional[int] = None
+    sort_by: Optional[str] = 'id'
+    sort_order: Optional[str] = 'asc'
 ```
 
-**Características:**
-- Registro de handlers por tipo de comando
-- Despacho automático al handler correcto
-- Validación de handlers registrados
-- Punto único de entrada para todos los comandos
+### Query Handlers
+
+```python
+# Application/QueryHandlers/GetAllHelloWorldHandler.py
+class GetAllHelloWorldHandler(QueryHandler):
+    """Implementa QueryHandler ABC."""
+    
+    def __init__(self, read_repository: HelloWorldReadRepositoryInterface):
+        self.read_repository = read_repository
+
+    def handle(self, query: GetAllHelloWorldQuery) -> List[HelloWorldReadModel]:
+        return self.read_repository.find_all(
+            limit=query.limit,
+            offset=query.offset,
+            sort_by=query.sort_by,
+            sort_order=query.sort_order
+        )
+```
 
 ---
 
-### 4. Registro en DI Container
+## 📊 Separación Write/Read
 
-**Archivo:** `app/config/container.py`
+### Write Repository (Commands)
 
 ```python
+# Domain/HelloWorld/HelloWorldRepositoryInterface.py
+class HelloWorldRepositoryInterface(ABC):
+    @abstractmethod
+    def save(self, hello_world: HelloWorld) -> HelloWorld:
+        pass
+
+    @abstractmethod
+    def delete(self, id: int) -> bool:
+        pass
+```
+
+### Read Repository (Queries)
+
+```python
+# Domain/HelloWorld/HelloWorldReadRepositoryInterface.py
+class HelloWorldReadRepositoryInterface(ABC):
+    @abstractmethod
+    def find_by_id(self, id: int) -> Optional[any]:
+        pass
+
+    @abstractmethod
+    def find_all(self, limit, offset, sort_by, sort_order) -> List[any]:
+        pass
+
+    @abstractmethod
+    def search(self, search_text, limit, offset) -> List[any]:
+        pass
+
+    @abstractmethod
+    def count(self) -> int:
+        pass
+```
+
+---
+
+## 🔧 Registro en DI Container
+
+```python
+# config/container.py
+
 def _register_command_handlers(container: Container) -> None:
-    """
-    Registra todos los command handlers en el command bus.
-    """
+    """Registra handlers de comandos."""
     command_bus = container.command_bus()
     
-    # Registrar CreateHelloWorldHandler
     command_bus.register(
         CreateHelloWorldCommand,
-        container.create_hello_world_handler()
+        container.create_hello_world_command_handler()
     )
-    
-    # Otros handlers...
     command_bus.register(
         UpdateHelloWorldCommand,
-        container.update_hello_world_handler()
+        container.update_hello_world_command_handler()
     )
-    
     command_bus.register(
         DeleteHelloWorldCommand,
-        container.delete_hello_world_handler()
+        container.delete_hello_world_command_handler()
+    )
+
+
+def _register_query_handlers(container: Container) -> None:
+    """Registra handlers de queries."""
+    query_bus = container.query_bus()
+    
+    query_bus.register(
+        GetAllHelloWorldQuery,
+        container.get_all_hello_world_query_handler()
+    )
+    query_bus.register(
+        GetHelloWorldByIdQuery,
+        container.get_hello_world_by_id_query_handler()
+    )
+    query_bus.register(
+        SearchHelloWorldQuery,
+        container.search_hello_world_query_handler()
     )
 ```
 
 ---
 
-## 🔄 Comparación de Flujos
+## ✅ Beneficios de CQRS Puro
 
-### Flujo Completo ANTES
-
-```
-1. HTTP POST /api/v1/hello-world/
-   Body: {"name": "Hello World"}
-        ↓
-2. HelloWorldController.create_hello_world()
-        ↓
-3. container.create_hello_world_use_case()
-        ↓
-4. CreateHelloWorldUseCase.execute(greeting_text)
-        ├─→ Greeting.create(greeting_text)
-        ├─→ HelloWorld.create(greeting)
-        ├─→ repository.save(hello_world)
-        ├─→ event_dispatcher.publish_multiple(events)
-        └─→ HelloWorldSerializer.to_dict(saved_entity)
-        ↓
-5. Retorna: {"id": 1, "greeting": "Hello World"}
-```
-
-### Flujo Completo DESPUÉS (CQRS)
-
-```
-1. HTTP POST /api/v1/hello-world/
-   Body: {"greeting": "Hello World"}
-        ↓
-2. HelloWorldController.create_hello_world()
-        ↓
-3. CreateHelloWorldCommand(greeting_text="Hello World")
-        ↓
-4. command_bus.dispatch(command)
-        ↓
-5. Command Bus busca handler por tipo
-        ↓
-6. CreateHelloWorldHandler.handle(command)
-        ├─→ GreetingValueObject.create(command.greeting_text)
-        ├─→ HelloWorld.create(greeting)
-        ├─→ repository.save(hello_world)
-        ├─→ saved_entity.mark_as_created(saved_entity.id)
-        ├─→ event_dispatcher.publish_multiple(events)
-        └─→ return saved_entity.id
-        ↓
-7. Controller construye respuesta
-        ↓
-8. Retorna: {"id": 1, "greeting": "Hello World"}
-```
-
----
-
-## 📊 Diferencias Clave
-
-| Aspecto | Antes (Use Case) | Después (CQRS) |
-|---------|-----------------|----------------|
-| **Patrón** | Use Case directo | Command + Command Bus |
-| **Acoplamiento** | Controller → Use Case | Controller → Command Bus |
-| **Punto de entrada** | Use Case | Command Bus |
-| **Tipo de operación** | Método execute() | Comando inmutable |
-| **Retorno** | Entidad serializada (dict) | Solo ID (int) |
-| **Separación Commands/Queries** | No clara | ✅ Explícita |
-| **Extensibilidad** | Modificar Use Case | Agregar middleware al bus |
-| **Testing** | Mock Use Case | Mock Command Bus |
-| **Campo API** | `name` | `greeting` (más semántico) |
+| Beneficio | Descripción |
+|-----------|-------------|
+| **Sin capa intermedia** | Controller → Bus → Handler (sin Use Cases) |
+| **Menor acoplamiento** | Controller solo conoce Commands/Queries y Buses |
+| **Extensibilidad** | Fácil agregar middleware al Bus |
+| **Testabilidad** | Mock del Bus o Handler directamente |
+| **Separación clara** | Escritura (Commands) vs Lectura (Queries) |
+| **Escalabilidad** | Read y Write pueden escalar independientemente |
 
 ---
 
 ## 🧪 Testing
 
-### Test del Command Handler
+### Test de Handler
 
 ```python
-def test_handle_creates_hello_world_and_saves():
-    """Debe crear entidad y guardarla en el repositorio"""
-    # Arrange
-    mock_repository = Mock()
+def test_create_hello_world_handler():
+    mock_repository = Mock(spec=HelloWorldRepositoryInterface)
+    mock_dispatcher = Mock(spec=EventDispatcherInterface)
     
     def save_side_effect(entity):
         entity._id = 123
         return entity
     mock_repository.save = Mock(side_effect=save_side_effect)
     
-    mock_event_dispatcher = Mock()
-    
-    handler = CreateHelloWorldHandler(mock_repository, mock_event_dispatcher)
-    command = CreateHelloWorldCommand(greeting_text="Test Greeting")
-    
-    # Act
-    result_id = handler.handle(command)
-    
-    # Assert
-    mock_repository.save.assert_called_once()
-    assert result_id == 123
-```
-
-### Test del Command Bus
-
-```python
-def test_dispatch_calls_correct_handler():
-    """Debe despachar al handler correcto según el tipo de comando"""
-    # Arrange
-    bus = CommandBus()
-    mock_handler = Mock()
-    mock_handler.handle.return_value = 42
-    
-    bus.register(CreateHelloWorldCommand, mock_handler)
+    handler = CreateHelloWorldHandler(mock_repository, mock_dispatcher)
     command = CreateHelloWorldCommand(greeting_text="Test")
     
-    # Act
-    result = bus.dispatch(command)
+    result_id = handler.handle(command)
     
-    # Assert
-    mock_handler.handle.assert_called_once_with(command)
-    assert result == 42
+    assert result_id == 123
+    mock_repository.save.assert_called_once()
+    mock_dispatcher.publish_multiple.assert_called_once()
+```
+
+### Test de Controller (con mock de Bus)
+
+```python
+def test_get_all_hello_world_endpoint(client, app):
+    with app.container.query_bus.override(Mock()):
+        mock_bus = app.container.query_bus()
+        mock_bus.dispatch.return_value = [{"id": 1, "greeting": "Test"}]
+        
+        response = client.get('/api/v1/hello-world/')
+        
+        assert response.status_code == 200
+        mock_bus.dispatch.assert_called_once()
 ```
 
 ---
 
-## 🚀 Próximos Pasos
-
-### Endpoints a Migrar
-
-- ✅ **POST /api/v1/hello-world/** - Migrado a CQRS
-- ✅ **DELETE /api/v1/hello-world/{id}** - Migrado a CQRS (Use Case usa CommandBus)
-- 🔄 **PUT /api/v1/hello-world/{id}** - Usar UpdateHelloWorldCommand (ya existe)
-
-### Queries (Ya implementados)
-
-- ✅ **GET /api/v1/hello-world/** - Usa QueryBus
-- ✅ **GET /api/v1/hello-world/{id}** - Usa QueryBus
-
----
-
-## 📝 Correcciones Adicionales
-
-### Use Cases como Adaptadores
-
-Los Use Cases antiguos (`CreateHelloWorldUseCase`, `DeleteHelloWorldUseCase`) se han mantenido pero refactorizado para actuar como adaptadores que usan el `CommandBus` internamente. Esto permite mantener la compatibilidad con los controladores existentes mientras se migra la lógica real a los Command Handlers.
-
-```python
-class CreateHelloWorldUseCase:
-    def __init__(self, command_bus):
-        self.command_bus = command_bus
-
-    def execute(self, greeting_text):
-        command = CreateHelloWorldCommand(greeting_text)
-        return self.command_bus.dispatch(command)
-```
-
-### Imports Circulares Corregidos
-
-Se corrigieron imports que usaban `app.Domain` en lugar de `Domain`:
-
-**Archivos corregidos:**
-- `app/Domain/HelloWorld/HelloWorld.py`
-- `app/Application/HelloWorldService.py`
-- `app/Application/UseCases/HelloWorld/CreateHelloWorldUseCase.py`
-- `app/Application/CommandHandlers/CreateHelloWorldHandler.py`
-- `app/Application/CommandHandlers/UpdateHelloWorldHandler.py`
-- `app/Infrastructure/Persistence/Mappers/HelloWorldMapper.py`
-
-**Antes:**
-```python
-from app.Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
-```
-
-**Después:**
-```python
-from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
-```
-
-### Tests Actualizados
-
-Todos los tests fueron actualizados para usar `GreetingValueObject` en lugar de `Greeting`:
-
-**Archivos actualizados:**
-- `tests/unit/Application/test_command_handlers.py` (✅ 8/8 tests passing)
-- `tests/unit/domain/entities/test_hello_world.py`
-- `tests/unit/domain/value_objects/test_greeting.py`
-- `tests/integration/test_hello_world_repository.py`
-- `tests/unit/use_cases/test_hello_world_use_cases.py`
-- `conftest.py`
-
----
-
-## ✅ Resultado Final
-
-**El proyecto ahora implementa CQRS puro con:**
-
-- ✅ Command Bus para operaciones de escritura
-- ✅ Query Bus para operaciones de lectura
-- ✅ Comandos inmutables (`@dataclass(frozen=True)`)
-- ✅ Handlers con responsabilidad única
-- ✅ **Interfaces abstractas** para handlers (`CommandHandler`, `QueryHandler`)
-- ✅ Separación clara Commands vs Queries
-- ✅ Event-Driven Architecture integrada
-- ✅ Dependency Injection con registro automático
-- ✅ **Dependency Inversion Principle (DIP)** en Query Handlers
-- ✅ Tests pasando (8/8 command handlers con 100% cobertura)
-
-**Beneficios arquitectónicos:**
-- 🎯 Mejor separación de responsabilidades
-- 🔧 Más fácil de mantener y extender
-- 🧪 Más testeable con mocks
-- 📈 Escalable (read/write independientes)
-- 🛡️ Más robusto ante cambios
-- ✅ **Tipado fuerte** con interfaces abstractas
-
----
-
-## 🔷 Interfaces de Handlers
-
-### CommandHandler (ABC)
-
-```python
-from abc import ABC, abstractmethod
-from typing import Any
-
-class CommandHandler(ABC):
-    """Interfaz base para todos los Command Handlers."""
-
-    @abstractmethod
-    def handle(self, command: Any) -> Any:
-        """Maneja la ejecución de un comando."""
-        pass
-```
-
-### QueryHandler (ABC)
-
-```python
-from abc import ABC, abstractmethod
-from typing import Any
-
-class QueryHandler(ABC):
-    """Interfaz base para todos los Query Handlers."""
-
-    @abstractmethod
-    def handle(self, query: Any) -> Any:
-        """Maneja la ejecución de una query."""
-        pass
-```
-
-**Beneficios de usar interfaces:**
-- ✅ Contrato explícito para todos los handlers
-- ✅ Type hints más precisos en los buses
-- ✅ Fácil detección de implementaciones incorrectas
-- ✅ Documentación implícita del patrón
-
----
-
-**Documentación actualizada el 26 de noviembre de 2025**
+**Última actualización: 26 de noviembre de 2025**

@@ -1,481 +1,293 @@
-# Casos de Uso - Implementación
+# Casos de Uso y CQRS - Implementación
 
-## ✅ Estructura Creada
+## ✅ Arquitectura Actual (CQRS Puro)
+
+El módulo **HelloWorld** usa CQRS puro sin capa de Use Cases intermedia.
+El módulo **Shows** mantiene Use Cases tradicionales (pendiente de migrar).
 
 ```
 Application/
-├── UseCases/
-│   ├── HelloWorld/
-│   │   ├── __init__.py
-│   │   ├── CreateHelloWorldUseCase.py
-│   │   ├── GetAllHelloWorldUseCase.py
-│   │   ├── GetHelloWorldByIdUseCase.py
-│   │   └── DeleteHelloWorldUseCase.py
-│   └── Shows/
-│       ├── __init__.py
-│       ├── SearchShowsUseCase.py
-│       └── GetShowByIdUseCase.py
-├── HelloWorldService.py (mantiene lógica de eventos)
-└── MoviesService.py (mantiene lógica de orquestación compleja)
+├── Commands/                   # Comandos CQRS (HelloWorld)
+├── CommandHandlers/            # Handlers de comandos
+├── Queries/                    # Queries CQRS (HelloWorld)
+├── QueryHandlers/              # Handlers de queries
+├── ReadModels/                 # DTOs de lectura
+├── EventHandlers/              # Handlers de eventos de dominio
+├── Serializers/                # Serializadores
+├── DTO/                        # DTOs de entrada
+├── MoviesService.py            # Servicio de orquestación (Shows)
+└── UseCases/
+    └── Shows/                  # Use Cases tradicionales (pendiente migrar)
+        ├── SearchShowsUseCase.py
+        └── GetShowByIdUseCase.py
 ```
 
 ---
 
-## ⚠️ Migración a CQRS
+## 🎯 Patrón CQRS Puro (HelloWorld)
 
-**El flujo POST (CREATE) ahora usa CQRS con Command Bus:**
-
-- ✅ **CreateHelloWorldHandler** + **CommandBus** (nuevo patrón CQRS)
-- ⚠️ **CreateHelloWorldUseCase** (legacy, mantenido por compatibilidad)
-
-**Flujo actual (CQRS):**
-```python
-# Controller
-command = CreateHelloWorldCommand(greeting_text=data['greeting'])
-command_bus = current_app.container.command_bus()
-entity_id = command_bus.dispatch(command)  # Retorna solo el ID
-```
-
-**Ver README.md sección "Flujo de Escritura (Commands)" para detalles completos.**
-
----
-
-## 🎯 Patrón Use Case
-
-### **Antes - Servicios con múltiples responsabilidades**
-
-```python
-# HelloWorldService.py
-class HelloWorldService:
-    def __init__(self, repository):
-        self.repository = repository
-    
-    def get_all_hello_world():
-    use_case = current_app.container.get_all_hello_world_use_case()
-    result = use_case.execute()
-    return format_response(result, 200)
-    
-    def addHelloWorld(self, dto):
-        # Lógica de crear
-        # + Emitir eventos
-        # + Validaciones
-        ...
-    
-    def getById(self, id):
-        # Lógica de obtener uno
-        ...
-    
-    def delete(self, id):
-        # Lógica de eliminar
-        ...
-```
-
-**Problemas:**
-- ❌ Clase con múltiples responsabilidades (viola SRP)
-- ❌ Difícil de testear casos específicos
-- ❌ No es claro qué hace cada método sin leer todo
-- ❌ Mezcla orquestación con casos de uso específicos
-
----
-
-### **Después - Casos de Uso específicos**
-
-```python
-# CreateHelloWorldUseCase.py
-class CreateHelloWorldUseCase:
-    """
-    Responsabilidad única: Crear un HelloWorld
-    """
-    def __init__(self, command_bus):
-        self.command_bus = command_bus
-    
-    def execute(self, greeting_text: str) -> dict:
-        command = CreateHelloWorldCommand(greeting_text=greeting_text)
-        entity_id = self.command_bus.dispatch(command)
-        return {"id": entity_id, "greeting": greeting_text}
-
-
-# GetAllHelloWorldUseCase.py
-class GetAllHelloWorldUseCase:
-    """
-    Responsabilidad única: Obtener todos los HelloWorld
-    """
-    def __init__(self, repository):
-        self.repository = repository
-    
-    def execute(self) -> List[dict]:
-        entities = self.repository.findAll()
-        return [HelloWorldSerializer.to_dict(e) for e in entities]
-
-
-# GetHelloWorldByIdUseCase.py
-class GetHelloWorldByIdUseCase:
-    """
-    Responsabilidad única: Obtener un HelloWorld por ID
-    """
-    def __init__(self, query_bus):
-        self.query_bus = query_bus
-    
-    def execute(self, id: int) -> Optional[dict]:
-        query = GetHelloWorldByIdQuery(id=id)
-        result = self.query_bus.dispatch(query)
-        return result.to_dict() if result else None
-
-
-# DeleteHelloWorldUseCase.py
-class DeleteHelloWorldUseCase:
-    """
-    Responsabilidad única: Eliminar un HelloWorld
-    """
-    def __init__(self, command_bus):
-        self.command_bus = command_bus
-    
-    def execute(self, id: int) -> bool:
-        command = DeleteHelloWorldCommand(id=id)
-        return self.command_bus.dispatch(command)
-```
-
-**Beneficios:**
-- ✅ Una clase = Una responsabilidad (SRP)
-- ✅ Fácil de testear individualmente
-- ✅ Nombre descriptivo del propósito
-- ✅ Código más pequeño y enfocado
-- ✅ Fácil de extender (agregar nuevos casos de uso)
-
----
-
-## 🔄 Flujo Comparado
-
-### **Antes (con Servicios)**
+### Flujo de Escritura (Commands)
 
 ```
-HTTP Request
+HTTP Request (POST/PUT/DELETE)
      ↓
 Controller
-     ↓ [obtiene Service desde Container]
-HelloWorldService
-     ↓ [método específico: getAllHelloWorld()]
-     ↓ [método específico: addHelloWorld()]
-     ↓ [método específico: delete()]
-Repository
+     ↓ [crea Command inmutable]
+CreateHelloWorldCommand
      ↓
-Database
+CommandBus.dispatch(command)
+     ↓ [busca handler por tipo]
+CreateHelloWorldHandler
+     ↓
+     ├─→ Value Object validation
+     ├─→ Domain Entity creation
+     ├─→ Repository.save()
+     └─→ EventDispatcher.publish()
+     ↓
+return entity_id (int)
 ```
 
-**Controller:**
-```python
-@helloWorldController.route('/', methods=['GET'])
-def getAllHelloWorld():
-    service = container.hello_world_service()
-    result = service.getAllHelloWorld()  # Método del servicio
-    return formatResponse(result, 200)
+### Flujo de Lectura (Queries)
+
+```
+HTTP Request (GET)
+     ↓
+Controller
+     ↓ [crea Query inmutable]
+GetAllHelloWorldQuery
+     ↓
+QueryBus.dispatch(query)
+     ↓ [busca handler por tipo]
+GetAllHelloWorldHandler
+     ↓
+     └─→ ReadRepository.find_all()
+     ↓
+return List[ReadModel]
 ```
 
 ---
 
-### **Después (con Use Cases)**
+## 📋 Componentes CQRS - HelloWorld
 
-```
-HTTP Request
-     ↓
-Controller
-     ↓ [obtiene Use Case específico desde Container]
-GetAllHelloWorldUseCase
-     ↓ [execute()]
-Repository
-     ↓
-Database
-```
+### Commands (4 comandos)
 
-**Controller:**
+| Command | Propósito | Entrada | Handler |
+|---------|-----------|---------|---------|
+| `CreateHelloWorldCommand` | Crear HelloWorld | `greeting_text: str` | `CreateHelloWorldHandler` |
+| `UpdateHelloWorldCommand` | Actualizar HelloWorld | `id: int, greeting_text: str` | `UpdateHelloWorldHandler` |
+| `DeleteHelloWorldCommand` | Eliminar HelloWorld | `id: int` | `DeleteHelloWorldHandler` |
+
+### Queries (3 queries)
+
+| Query | Propósito | Entrada | Handler |
+|-------|-----------|---------|---------|
+| `GetAllHelloWorldQuery` | Listar todos | `limit?, offset?, sort_by?, sort_order?` | `GetAllHelloWorldHandler` |
+| `GetHelloWorldByIdQuery` | Obtener por ID | `id: int` | `GetHelloWorldByIdHandler` |
+| `SearchHelloWorldQuery` | Buscar por texto | `search_text: str, limit?, offset?` | `SearchHelloWorldHandler` |
+
+---
+
+## 🔄 Ejemplo de Controller (CQRS Puro)
+
 ```python
-@helloWorldController.route('/', methods=['GET'])
+# Infrastructure/Controller/HelloWorldController.py
+
+@hello_world_controller.route('/', methods=['GET'])
 def get_all_hello_world():
-    use_case = current_app.container.get_all_hello_world_use_case()
-    result = service.get_all_hello_world()  # Método del servicio
-    return format_response(result, 200)
+    """GET /api/v1/hello-world/ - Lista todos"""
+    # Crear Query con parámetros opcionales
+    query = GetAllHelloWorldQuery(
+        limit=request.args.get('limit', type=int),
+        offset=request.args.get('offset', type=int),
+        sort_by=request.args.get('sort_by', default='id'),
+        sort_order=request.args.get('sort_order', default='asc')
+    )
+    
+    # Despachar al QueryBus
+    query_bus = current_app.container.query_bus()
+    result = query_bus.dispatch(query)
+    
+    return ControllerBase.format_response(result, 200)
+
+
+@hello_world_controller.route('/', methods=['POST'])
+def create_hello_world():
+    """POST /api/v1/hello-world/ - Crear nuevo"""
+    data = request.get_json()
+    
+    # Crear Command
+    command = CreateHelloWorldCommand(greeting_text=data['greeting'])
+    
+    # Despachar al CommandBus
+    command_bus = current_app.container.command_bus()
+    entity_id = command_bus.dispatch(command)
+    
+    # Obtener entidad creada via QueryBus
+    query = GetHelloWorldByIdQuery(id=entity_id)
+    query_bus = current_app.container.query_bus()
+    created_entity = query_bus.dispatch(query)
+    
+    return ControllerBase.format_response(created_entity, 201)
+
+
+@hello_world_controller.route('/<int:id>', methods=['DELETE'])
+def delete_hello_world(id: int):
+    """DELETE /api/v1/hello-world/{id} - Eliminar"""
+    # Verificar existencia
+    query = GetHelloWorldByIdQuery(id=id)
+    query_bus = current_app.container.query_bus()
+    existing = query_bus.dispatch(query)
+    
+    if existing is None:
+        return ControllerBase.format_response({"error": "Not found"}, 404)
+    
+    # Despachar comando de eliminación
+    command = DeleteHelloWorldCommand(id=id)
+    command_bus = current_app.container.command_bus()
+    command_bus.dispatch(command)
+    
+    return ControllerBase.format_response({"message": "Deleted"}, 200)
 ```
 
 ---
 
-## 📋 Casos de Uso Creados
+## 📊 Comparación: CQRS vs Use Cases
 
-### **HelloWorld (4 casos de uso)**
-
-| Use Case | Responsabilidad | Entrada | Salida | Estado |
-|----------|----------------|---------|--------|--------|
-| `CreateHelloWorldUseCase` | Crear nuevo HelloWorld (usa CommandBus) | `greeting_text: str` | `dict` | ✅ Activo |
-| `GetAllHelloWorldUseCase` | Listar todos (usa QueryBus) | - | `List[dict]` | ✅ Activo |
-| `GetHelloWorldByIdUseCase` | Obtener por ID (usa QueryBus) | `id: int` | `Optional[dict]` | ✅ Activo |
-| `DeleteHelloWorldUseCase` | Eliminar por ID (usa CommandBus) | `id: int` | `bool` | ✅ Activo |
-
-### **Shows/Movies (2 casos de uso)**
-
-| Use Case | Responsabilidad | Entrada | Salida |
-|----------|----------------|---------|--------|
-| `SearchShowsUseCase` | Buscar shows por criterios | `criteria: Dict` | `List[dict]` |
-| `GetShowByIdUseCase` | Obtener show por ID | `show_id: str` | `Optional[dict]` |
+| Aspecto | Use Cases (Shows) | CQRS Puro (HelloWorld) |
+|---------|-------------------|------------------------|
+| **Capas** | Controller → UseCase → Repository | Controller → Bus → Handler → Repository |
+| **Acoplamiento** | Medio (UseCase específico) | Bajo (Bus genérico) |
+| **Extensibilidad** | Nueva clase UseCase | Nuevo Command/Query + Handler |
+| **Middleware** | Difícil | Fácil (en el Bus) |
+| **Testing** | Mock UseCase | Mock Bus o Handler |
+| **Separación R/W** | No explícita | ✅ Explícita |
 
 ---
 
-## 🏗️ DI Container Actualizado
+## 🏗️ DI Container
 
 ```python
 # config/container.py
+
 class Container(containers.DeclarativeContainer):
-    # Repositories
-    hello_world_repository = providers.Factory(HelloWorldRepository)
-    shows_repository = providers.Factory(ShowsRepository, ...)
     
-    # ========== USE CASES - HELLO WORLD ==========
+    # ========== CQRS - BUSES ==========
+    command_bus = providers.Singleton(CommandBus)
+    query_bus = providers.Singleton(QueryBus)
     
-    create_hello_world_use_case = providers.Factory(
-        CreateHelloWorldUseCase,
-        command_bus=command_bus
+    # ========== COMMAND HANDLERS ==========
+    create_hello_world_command_handler = providers.Factory(
+        CreateHelloWorldHandler,
+        write_repository=hello_world_write_repository,
+        event_dispatcher=event_dispatcher
     )
     
-    get_all_hello_world_use_case = providers.Factory(
-        GetAllHelloWorldUseCase,
-        query_bus=query_bus
+    # ========== QUERY HANDLERS ==========
+    get_all_hello_world_query_handler = providers.Factory(
+        GetAllHelloWorldHandler,
+        read_repository=hello_world_read_repository
     )
     
-    get_hello_world_by_id_use_case = providers.Factory(
-        GetHelloWorldByIdUseCase,
-        query_bus=query_bus
-    )
-    
-    delete_hello_world_use_case = providers.Factory(
-        DeleteHelloWorldUseCase,
-        command_bus=command_bus
-    )
-    
-    # ========== USE CASES - SHOWS ==========
-    
+    # ========== USE CASES - SHOWS (legacy) ==========
     search_shows_use_case = providers.Factory(
         SearchShowsUseCase,
         repository=shows_repository
     )
-    
-    get_show_by_id_use_case = providers.Factory(
-        GetShowByIdUseCase,
-        repository=shows_repository
-    )
+
+
+def _register_command_handlers(container: Container) -> None:
+    """Registra handlers de comandos en el bus."""
+    command_bus = container.command_bus()
+    command_bus.register(CreateHelloWorldCommand, container.create_hello_world_command_handler())
+    command_bus.register(DeleteHelloWorldCommand, container.delete_hello_world_command_handler())
+
+
+def _register_query_handlers(container: Container) -> None:
+    """Registra handlers de queries en el bus."""
+    query_bus = container.query_bus()
+    query_bus.register(GetAllHelloWorldQuery, container.get_all_hello_world_query_handler())
+    query_bus.register(GetHelloWorldByIdQuery, container.get_hello_world_by_id_query_handler())
 ```
 
 ---
 
-## 🎯 Controladores Actualizados
+## 🚀 Cómo Agregar una Nueva Operación CQRS
 
-### **Antes**
-
-```python
-@helloWorldController.route('/', methods=['POST'])
-def createHelloWorld():
-    data = request.get_json()
-    
-    # Crear DTO
-    dto = GreetingDTO(name=data['name'])
-    
-    # Obtener servicio
-    service = container.hello_world_service()
-    
-    # Llamar método específico del servicio
-    result = service.addHelloWorld(dto)
-    
-    return formatResponse(result, 201)
-```
-
-### **Después**
+### 1. Crear el Command/Query
 
 ```python
-@helloWorldController.route('/', methods=['POST'])
-def createHelloWorld():
-    data = request.get_json()
-    
-    # Obtener caso de uso específico
-    use_case = container.create_hello_world_use_case()
-    
-    # Ejecutar caso de uso (siempre es .execute())
-    result = use_case.execute(data['name'])
-    
-    return formatResponse(result, 201)
+# Application/Commands/UpdateHelloWorldCommand.py
+@dataclass(frozen=True)
+class UpdateHelloWorldCommand:
+    id: int
+    greeting_text: str
 ```
 
-**Mejoras:**
-- ✅ No necesita DTO (simplificado)
-- ✅ Obtiene el caso de uso específico del container
-- ✅ Método `execute()` consistente en todos los casos de uso
-- ✅ Más declarativo y claro
-
----
-
-## 🧪 Testing
-
-### **Test de Use Case (simple)**
+### 2. Crear el Handler
 
 ```python
-def test_create_hello_world_use_case():
-    # Arrange
-    mock_repo = Mock(spec=HelloWorldRepositoryInterface)
-    mock_repo.save.return_value = HelloWorld(Greeting.create("Test"))
+# Application/CommandHandlers/UpdateHelloWorldHandler.py
+class UpdateHelloWorldHandler(CommandHandler):
+    def __init__(self, write_repository, read_repository, event_dispatcher):
+        self.write_repository = write_repository
+        self.read_repository = read_repository
+        self.event_dispatcher = event_dispatcher
     
-    use_case = CreateHelloWorldUseCase(repository=mock_repo)
-    
-    # Act
-    result = use_case.execute("Test")
-    
-    # Assert
-    assert result["greeting"] == "Test"
-    mock_repo.save.assert_called_once()
-
-
-def test_delete_hello_world_use_case():
-    # Arrange
-    mock_repo = Mock(spec=HelloWorldRepositoryInterface)
-    mock_repo.delete.return_value = True
-    mock_event_dispatcher = Mock()
-    
-    use_case = DeleteHelloWorldUseCase(
-        repository=mock_repo,
-        event_dispatcher=mock_event_dispatcher
-    )
-    
-    # Act
-    result = use_case.execute(1)
-    
-    # Assert
-    assert result is True
-    mock_repo.delete.assert_called_once_with(1)
-    mock_event_dispatcher.publish.assert_called_once()
+    def handle(self, command: UpdateHelloWorldCommand) -> int:
+        # Lógica de actualización
+        pass
 ```
 
-**Ventajas del testing:**
-- ✅ Test más pequeños y enfocados
-- ✅ Cada caso de uso se testea independientemente
-- ✅ Fácil de hacer mocks específicos
-- ✅ Cobertura más granular
-
----
-
-## 📊 Comparación de Responsabilidades
-
-### **Servicios (mantienen)**
-- Orquestación compleja de múltiples casos de uso
-- Emisión de eventos de dominio
-- Lógica transversal a varios casos de uso
-- Coordinación entre múltiples agregados
-
-**Ejemplo (mantener):**
-```python
-class HelloWorldService:
-    def processComplexOperation(self, data):
-        # 1. Crear HelloWorld
-        create_use_case = CreateHelloWorldUseCase(...)
-        created = create_use_case.execute(data)
-        
-        # 2. Emitir evento
-        signals['new_hello_world'].send(...)
-        
-        # 3. Realizar otra operación
-        # ...
-        
-        return result
-```
-
-### **Use Cases (nuevos)**
-- Una responsabilidad específica
-- Operación CRUD simple
-- Caso de uso de negocio aislado
-- No dependen entre sí
-
-**Ejemplo:**
-```python
-class GetAllHelloWorldUseCase:
-    def execute(self):
-        # Solo obtener y serializar
-        entities = self.repository.findAll()
-        return [HelloWorldSerializer.to_dict(e) for e in entities]
-```
-
----
-
-## ✅ Beneficios Obtenidos
-
-| Aspecto | Antes (Servicios) | Después (Use Cases) |
-|---------|------------------|---------------------|
-| **Responsabilidad** | Múltiple (varios métodos) | Única (un caso de uso) |
-| **Tamaño de clase** | Grande (muchos métodos) | Pequeña (solo execute) |
-| **Testing** | Tests grandes para toda la clase | Tests pequeños por caso de uso |
-| **Claridad** | "¿Qué hace este servicio?" | "Crea un HelloWorld" |
-| **Extensibilidad** | Agregar métodos al servicio | Agregar nueva clase |
-| **Reusabilidad** | Limitada (acoplado al servicio) | Alta (independiente) |
-| **SRP** | Violado | Cumplido |
-
----
-
-## 🚀 Cómo Agregar un Nuevo Caso de Uso
-
-### **1. Crear el caso de uso**
-
-```python
-# Application/UseCases/HelloWorld/UpdateHelloWorldUseCase.py
-class UpdateHelloWorldUseCase:
-    def __init__(self, repository: HelloWorldRepositoryInterface):
-        self.repository = repository
-    
-    def execute(self, id: int, new_greeting: str) -> Optional[dict]:
-        # 1. Buscar entidad existente
-        entity = self.repository.findById(id)
-        if not entity:
-            return None
-        
-        # 2. Actualizar (crear nuevo con nuevo greeting)
-        greeting = Greeting.create(new_greeting)
-        updated_entity = HelloWorld(greeting=greeting)
-        updated_entity._id = entity._id
-        
-        # 3. Guardar
-        saved = self.repository.save(updated_entity)
-        
-        # 4. Serializar
-        return HelloWorldSerializer.to_dict(saved)
-```
-
-### **2. Registrar en el Container**
+### 3. Registrar en Container
 
 ```python
 # config/container.py
-update_hello_world_use_case = providers.Factory(
-    UpdateHelloWorldUseCase,
-    repository=hello_world_repository
+update_hello_world_handler = providers.Factory(
+    UpdateHelloWorldHandler,
+    write_repository=hello_world_write_repository,
+    ...
 )
+
+# En _register_command_handlers:
+command_bus.register(UpdateHelloWorldCommand, container.update_hello_world_handler())
 ```
 
-### **3. Usar en el Controller**
+### 4. Usar en Controller
 
 ```python
-@helloWorldController.route('/<int:id>', methods=['PUT'])
-def updateHelloWorld(id: int):
+@hello_world_controller.route('/<int:id>', methods=['PUT'])
+def update_hello_world(id: int):
     data = request.get_json()
-    use_case = container.update_hello_world_use_case()
-    result = use_case.execute(id, data['name'])
-    
-    if result is None:
-        return format_response({"error": "Not found"}, 404)
-    
-    return format_response(result, 200)
+    command = UpdateHelloWorldCommand(id=id, greeting_text=data['greeting'])
+    command_bus = current_app.container.command_bus()
+    command_bus.dispatch(command)
+    return ControllerBase.format_response({"message": "Updated"}, 200)
 ```
 
 ---
 
-## 📝 Resumen
+## ✅ Beneficios de CQRS Puro
 
-✅ **6 casos de uso creados** (4 HelloWorld + 2 Shows)  
-✅ **Controladores refactorizados** para usar casos de uso  
-✅ **DI Container actualizado** con todos los casos de uso  
-✅ **Single Responsibility Principle** aplicado correctamente  
-✅ **Testing simplificado** con casos de uso pequeños  
-✅ **Código más mantenible** y extensible  
-✅ **Patrón consistente** en toda la aplicación
+| Beneficio | Descripción |
+|-----------|-------------|
+| **Separación clara** | Escritura y lectura en flujos independientes |
+| **Escalabilidad** | Read y Write pueden escalar por separado |
+| **Testabilidad** | Handlers pequeños y fáciles de testear |
+| **Extensibilidad** | Middleware en los buses (logging, validación, auth) |
+| **Single Responsibility** | Cada handler hace una sola cosa |
+| **Inmutabilidad** | Commands/Queries son frozen dataclasses |
 
-**Los servicios antiguos se mantienen para lógica de orquestación compleja, pero los casos de uso simples ahora están separados.**
+---
+
+## 📝 Resumen de Estado
+
+| Módulo | Patrón | Estado |
+|--------|--------|--------|
+| **HelloWorld** | CQRS Puro | ✅ Completo |
+| **Shows** | Use Cases | ⚠️ Legacy (funcional) |
+
+**Recomendación:** Migrar Shows a CQRS cuando sea necesario escalar o agregar funcionalidad compleja.
+
+---
+
+**Última actualización: 26 de noviembre de 2025**
