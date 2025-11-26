@@ -2,8 +2,6 @@ from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepository
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Application.Serializers.HelloWorldSerializer import HelloWorldSerializer
-from config.signals import signals
-import uuid
 from Application.DTO.GreetingDTO import GreetingDTO
 
 
@@ -53,9 +51,5 @@ class HelloWorldService:
 
         # Emitir señal con el resultado
         result_dict = HelloWorldSerializer.to_dict(saved_entity)
-        signals['new_hello_world'].send(
-            sender=uuid.uuid4().hex,
-            message=result_dict,
-        )
 
         return result_dict
