@@ -119,23 +119,26 @@ class CreateHelloWorldCommand:
 
 ---
 
-### 2. Command Handler
+### 2. Command Handler (implementa CommandHandler ABC)
 
 **Archivo:** `app/Application/CommandHandlers/CreateHelloWorldHandler.py`
 
 ```python
-class CreateHelloWorldHandler:
+from Shared.Application.CommandHandler import CommandHandler
+
+class CreateHelloWorldHandler(CommandHandler):
     """
     Maneja la creación de HelloWorld.
     Encapsula la lógica de negocio para crear entidades.
+    Implementa la interfaz CommandHandler.
     """
     
     def __init__(
         self,
-        repository: HelloWorldRepositoryInterface,
+        write_repository: HelloWorldRepositoryInterface,
         event_dispatcher: EventDispatcherInterface
     ):
-        self.repository = repository
+        self.write_repository = write_repository
         self.event_dispatcher = event_dispatcher
     
     def handle(self, command: CreateHelloWorldCommand) -> int:
@@ -175,11 +178,13 @@ class CreateHelloWorldHandler:
 
 ---
 
-### 3. Command Bus
+### 3. Command Bus (tipado con CommandHandler)
 
 **Archivo:** `app/Shared/Application/CommandBus.py`
 
 ```python
+from Shared.Application.CommandHandler import CommandHandler
+
 class CommandBus:
     """
     Bus de comandos que despacha comandos a sus handlers.
@@ -187,9 +192,9 @@ class CommandBus:
     """
     
     def __init__(self):
-        self._handlers: Dict[Type, Any] = {}
+        self._handlers: Dict[Type, CommandHandler] = {}
     
-    def register(self, command_type: Type, handler: Any) -> None:
+    def register(self, command_type: Type, handler: CommandHandler) -> None:
         """Registra un handler para un tipo de comando."""
         if command_type in self._handlers:
             raise ValueError(f"Handler already registered for {command_type.__name__}")
@@ -443,9 +448,11 @@ Todos los tests fueron actualizados para usar `GreetingValueObject` en lugar de 
 - ✅ Query Bus para operaciones de lectura
 - ✅ Comandos inmutables (`@dataclass(frozen=True)`)
 - ✅ Handlers con responsabilidad única
+- ✅ **Interfaces abstractas** para handlers (`CommandHandler`, `QueryHandler`)
 - ✅ Separación clara Commands vs Queries
 - ✅ Event-Driven Architecture integrada
 - ✅ Dependency Injection con registro automático
+- ✅ **Dependency Inversion Principle (DIP)** en Query Handlers
 - ✅ Tests pasando (8/8 command handlers con 100% cobertura)
 
 **Beneficios arquitectónicos:**
@@ -454,7 +461,48 @@ Todos los tests fueron actualizados para usar `GreetingValueObject` en lugar de 
 - 🧪 Más testeable con mocks
 - 📈 Escalable (read/write independientes)
 - 🛡️ Más robusto ante cambios
+- ✅ **Tipado fuerte** con interfaces abstractas
 
 ---
 
-**Documentación actualizada el 19 de noviembre de 2025**
+## 🔷 Interfaces de Handlers
+
+### CommandHandler (ABC)
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any
+
+class CommandHandler(ABC):
+    """Interfaz base para todos los Command Handlers."""
+
+    @abstractmethod
+    def handle(self, command: Any) -> Any:
+        """Maneja la ejecución de un comando."""
+        pass
+```
+
+### QueryHandler (ABC)
+
+```python
+from abc import ABC, abstractmethod
+from typing import Any
+
+class QueryHandler(ABC):
+    """Interfaz base para todos los Query Handlers."""
+
+    @abstractmethod
+    def handle(self, query: Any) -> Any:
+        """Maneja la ejecución de una query."""
+        pass
+```
+
+**Beneficios de usar interfaces:**
+- ✅ Contrato explícito para todos los handlers
+- ✅ Type hints más precisos en los buses
+- ✅ Fácil detección de implementaciones incorrectas
+- ✅ Documentación implícita del patrón
+
+---
+
+**Documentación actualizada el 26 de noviembre de 2025**

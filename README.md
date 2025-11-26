@@ -600,7 +600,9 @@ app/
 └── Shared/                         # Componentes compartidos
     ├── Application/
     │   ├── CommandBus.py          # 🔵 CQRS - Command Bus
-    │   └── QueryBus.py            # 🔵 CQRS - Query Bus
+    │   ├── QueryBus.py            # 🔵 CQRS - Query Bus
+    │   ├── CommandHandler.py      # 🔵 Interface ABC para Command Handlers
+    │   └── QueryHandler.py        # 🔵 Interface ABC para Query Handlers
     │
     ├── Domain/
     │   ├── Entities/
@@ -626,7 +628,13 @@ app/
 
 ### Guías Disponibles
 
-- **[CQRS_MIGRATION.md](doc/CQRS_MIGRATION.md)** - 🆕 Migración a CQRS Completo
+- **[ARCHITECTURE_SUMMARY.md](doc/ARCHITECTURE_SUMMARY.md)** - 🆕 Resumen rápido de la arquitectura
+  - Validación de patrones (Hexagonal, DDD, CQRS)
+  - Estructura de capas visual
+  - Interfaces clave
+  - Guía para agregar nuevos módulos
+
+- **[CQRS_MIGRATION.md](doc/CQRS_MIGRATION.md)** - Migración a CQRS Completo
   - Flujo POST refactorizado con Command Bus
   - Comparación antes/después
   - Componentes CQRS (Command, Handler, Bus)

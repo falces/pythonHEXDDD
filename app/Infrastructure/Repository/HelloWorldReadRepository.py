@@ -8,9 +8,10 @@ from sqlalchemy import select, func
 from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
 from Infrastructure.Persistence.SQLAlchemy.HelloWorldModel import HelloWorldModel
 from Infrastructure.Persistence.database import db
+from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 
 
-class HelloWorldReadRepository:
+class HelloWorldReadRepository(HelloWorldReadRepositoryInterface):
     """
     Repositorio optimizado para operaciones de lectura.
     Usa queries SQL directas y puede incluir joins, índices específicos, etc.

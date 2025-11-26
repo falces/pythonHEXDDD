@@ -5,7 +5,7 @@ Handler para procesar SearchHelloWorldQuery.
 from typing import List
 from Application.Queries.SearchHelloWorldQuery import SearchHelloWorldQuery
 from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
-from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
+from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 from Shared.Application.QueryHandler import QueryHandler
 
 
@@ -14,7 +14,7 @@ class SearchHelloWorldHandler(QueryHandler):
     Maneja la búsqueda de HelloWorld con criterios.
     """
 
-    def __init__(self, read_repository: HelloWorldReadRepository):
+    def __init__(self, read_repository: HelloWorldReadRepositoryInterface):
         self.read_repository = read_repository
 
     def handle(self, query: SearchHelloWorldQuery) -> List[HelloWorldReadModel]:

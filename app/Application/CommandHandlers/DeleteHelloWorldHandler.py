@@ -4,7 +4,7 @@ Handler para procesar el comando DeleteHelloWorldCommand.
 
 from Application.Commands.DeleteHelloWorldCommand import DeleteHelloWorldCommand
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
+from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 from Domain.HelloWorld.Events.HelloWorldDeleted import HelloWorldDeleted
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 from Shared.Application.CommandHandler import CommandHandler
@@ -19,7 +19,7 @@ class DeleteHelloWorldHandler(CommandHandler):
     def __init__(
         self,
         write_repository: HelloWorldRepositoryInterface,
-        read_repository: HelloWorldReadRepository,
+        read_repository: HelloWorldReadRepositoryInterface,
         event_dispatcher: EventDispatcherInterface
     ):
         self.write_repository = write_repository

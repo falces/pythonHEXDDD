@@ -5,7 +5,7 @@ Handler para procesar GetAllHelloWorldQuery.
 from typing import List
 from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
 from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
-from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
+from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 from Shared.Application.QueryHandler import QueryHandler
 
 
@@ -15,7 +15,7 @@ class GetAllHelloWorldHandler(QueryHandler):
     Usa repositorio de lectura optimizado.
     """
 
-    def __init__(self, read_repository: HelloWorldReadRepository):
+    def __init__(self, read_repository: HelloWorldReadRepositoryInterface):
         self.read_repository = read_repository
 
     def handle(self, query: GetAllHelloWorldQuery) -> List[HelloWorldReadModel]:

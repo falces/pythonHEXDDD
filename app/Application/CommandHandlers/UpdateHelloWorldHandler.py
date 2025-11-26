@@ -5,7 +5,7 @@ Handler para procesar el comando UpdateHelloWorldCommand.
 from Application.Commands.UpdateHelloWorldCommand import UpdateHelloWorldCommand
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
+from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 from Shared.Application.CommandHandler import CommandHandler
 
@@ -19,7 +19,7 @@ class UpdateHelloWorldHandler(CommandHandler):
     def __init__(
         self,
         write_repository: HelloWorldRepositoryInterface,
-        read_repository: HelloWorldReadRepository,
+        read_repository: HelloWorldReadRepositoryInterface,
         event_dispatcher: EventDispatcherInterface
     ):
         self.write_repository = write_repository

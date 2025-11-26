@@ -5,7 +5,7 @@ Handler para procesar GetHelloWorldByIdQuery.
 from typing import Optional
 from Application.Queries.GetHelloWorldByIdQuery import GetHelloWorldByIdQuery
 from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
-from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
+from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 from Shared.Application.QueryHandler import QueryHandler
 
 
@@ -15,7 +15,7 @@ class GetHelloWorldByIdHandler(QueryHandler):
     Usa repositorio de lectura optimizado.
     """
 
-    def __init__(self, read_repository: HelloWorldReadRepository):
+    def __init__(self, read_repository: HelloWorldReadRepositoryInterface):
         self.read_repository = read_repository
 
     def handle(self, query: GetHelloWorldByIdQuery) -> Optional[HelloWorldReadModel]:

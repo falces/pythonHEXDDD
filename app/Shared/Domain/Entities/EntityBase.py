@@ -2,9 +2,12 @@ from typing import List
 from Shared.Domain.Events.DomainEvent import DomainEvent
 
 
-class EntityBase():
-    def get_model(self):
-        return self.model
+class EntityBase:
+    """
+    Clase base para todas las entidades del dominio.
+    Las entidades tienen identidad y ciclo de vida.
+    """
+    pass
 
 
 class AggregateRootBase(EntityBase):
