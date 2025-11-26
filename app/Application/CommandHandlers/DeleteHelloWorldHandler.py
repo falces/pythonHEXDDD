@@ -7,9 +7,10 @@ from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepository
 from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
 from Domain.HelloWorld.Events.HelloWorldDeleted import HelloWorldDeleted
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
+from Shared.Application.CommandHandler import CommandHandler
 
 
-class DeleteHelloWorldHandler:
+class DeleteHelloWorldHandler(CommandHandler):
     """
     Maneja la eliminación de HelloWorld.
     En CQRS puro: usa read_repository para validación y write_repository para eliminar.

@@ -37,7 +37,7 @@ class TestCommandBus:
         command = CreateHelloWorldCommand(greeting_text="Test")
 
         # Act & Assert
-        with pytest.raises(ValueError, match="No hay handler registrado para"):
+        with pytest.raises(ValueError, match="No handler registered for command"):
             bus.dispatch(command)
 
     def test_register_multiple_commands(self):
@@ -48,7 +48,7 @@ class TestCommandBus:
         delete_handler = Mock()
 
         create_command = CreateHelloWorldCommand(greeting_text="Test")
-        delete_command = DeleteHelloWorldCommand(hello_world_id=1)
+        delete_command = DeleteHelloWorldCommand(id=1)
 
         # Act
         bus.register(CreateHelloWorldCommand, create_handler)
@@ -61,23 +61,17 @@ class TestCommandBus:
         create_handler.handle.assert_called_once_with(create_command)
         delete_handler.handle.assert_called_once_with(delete_command)
 
-    def test_register_replaces_existing_handler(self):
-        """Debe reemplazar handler existente al re-registrar"""
+    def test_register_raises_error_if_handler_exists(self):
+        """Debe lanzar error al intentar re-registrar handler"""
         # Arrange
         bus = CommandBus()
         old_handler = Mock()
         new_handler = Mock()
 
-        command = CreateHelloWorldCommand(greeting_text="Test")
-
-        # Act
+        # Act & Assert
         bus.register(CreateHelloWorldCommand, old_handler)
-        bus.register(CreateHelloWorldCommand, new_handler)
-        bus.dispatch(command)
-
-        # Assert
-        old_handler.handle.assert_not_called()
-        new_handler.handle.assert_called_once()
+        with pytest.raises(ValueError, match="Handler already registered for"):
+            bus.register(CreateHelloWorldCommand, new_handler)
 
     def test_dispatch_propagates_handler_exceptions(self):
         """Debe propagar excepciones lanzadas por el handler"""

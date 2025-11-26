@@ -4,6 +4,7 @@ Implementa el patrón Command Bus de CQRS.
 """
 
 from typing import Dict, Type, Any
+from Shared.Application.CommandHandler import CommandHandler
 
 
 class CommandBus:
@@ -14,9 +15,9 @@ class CommandBus:
     """
 
     def __init__(self):
-        self._handlers: Dict[Type, Any] = {}
+        self._handlers: Dict[Type, CommandHandler] = {}
 
-    def register(self, command_type: Type, handler: Any) -> None:
+    def register(self, command_type: Type, handler: CommandHandler) -> None:
         """
         Registra un handler para un tipo de comando.
 

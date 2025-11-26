@@ -7,9 +7,10 @@ from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObje
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
 from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
+from Shared.Application.CommandHandler import CommandHandler
 
 
-class UpdateHelloWorldHandler:
+class UpdateHelloWorldHandler(CommandHandler):
     """
     Maneja la actualización de HelloWorld.
     En CQRS puro: usa read_repository para validación y write_repository para persistir.

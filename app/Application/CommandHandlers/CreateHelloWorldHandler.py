@@ -7,9 +7,10 @@ from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
+from Shared.Application.CommandHandler import CommandHandler
 
 
-class CreateHelloWorldHandler:
+class CreateHelloWorldHandler(CommandHandler):
     """
     Maneja la creación de HelloWorld.
     Encapsula la lógica de negocio para crear entidades.
