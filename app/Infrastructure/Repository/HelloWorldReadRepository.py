@@ -33,7 +33,7 @@ class HelloWorldReadRepository:
 
         if model is None:
             return None
-        print(model)
+
         return self._to_read_model(model)
 
     def find_all(

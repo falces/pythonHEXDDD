@@ -99,39 +99,39 @@ class Container(containers.DeclarativeContainer):
 
     # ========== CQRS - COMMAND HANDLERS ==========
 
-    create_hello_world_handler = providers.Factory(
+    create_hello_world_command_handler = providers.Factory(
         CreateHelloWorldHandler,
-        repository=hello_world_write_repository,
+        write_repository=hello_world_write_repository,
         event_dispatcher=event_dispatcher
     )
 
-    update_hello_world_handler = providers.Factory(
+    update_hello_world_command_handler = providers.Factory(
         UpdateHelloWorldHandler,
-        repository=hello_world_write_repository,
+        write_repository=hello_world_write_repository,
         read_repository=hello_world_read_repository,
         event_dispatcher=event_dispatcher
     )
 
-    delete_hello_world_handler = providers.Factory(
+    delete_hello_world_command_handler = providers.Factory(
         DeleteHelloWorldHandler,
-        repository=hello_world_write_repository,
+        write_repository=hello_world_write_repository,
         read_repository=hello_world_read_repository,
         event_dispatcher=event_dispatcher
     )
 
     # ========== CQRS - QUERY HANDLERS ==========
 
-    get_all_hello_world_handler = providers.Factory(
+    get_all_hello_world_query_handler = providers.Factory(
         GetAllHelloWorldHandler,
         read_repository=hello_world_read_repository
     )
 
-    get_hello_world_by_id_handler = providers.Factory(
+    get_hello_world_by_id_query_handler = providers.Factory(
         GetHelloWorldByIdHandler,
         read_repository=hello_world_read_repository
     )
 
-    search_hello_world_handler = providers.Factory(
+    search_hello_world_query_handler = providers.Factory(
         SearchHelloWorldHandler,
         read_repository=hello_world_read_repository
     )
@@ -161,7 +161,7 @@ class Container(containers.DeclarativeContainer):
         repository=shows_repository
     )
 
-    # ========== USE CASES - HELLO WORLD (LEGACY) ==========
+    # ========== USE CASES ==========
 
     create_hello_world_use_case = providers.Factory(
         CreateHelloWorldUseCase,
@@ -182,8 +182,6 @@ class Container(containers.DeclarativeContainer):
         DeleteHelloWorldUseCase,
         command_bus=command_bus
     )
-
-    # ========== USE CASES - SHOWS ==========
 
     search_shows_use_case = providers.Factory(
         SearchShowsUseCase,
@@ -257,15 +255,15 @@ def _register_command_handlers(container: Container) -> None:
     # Registrar handlers de comandos
     command_bus.register(
         CreateHelloWorldCommand,
-        container.create_hello_world_handler()
+        container.create_hello_world_command_handler()
     )
     command_bus.register(
         UpdateHelloWorldCommand,
-        container.update_hello_world_handler()
+        container.update_hello_world_command_handler()
     )
     command_bus.register(
         DeleteHelloWorldCommand,
-        container.delete_hello_world_handler()
+        container.delete_hello_world_command_handler()
     )
 
 
@@ -281,13 +279,13 @@ def _register_query_handlers(container: Container) -> None:
     # Registrar handlers de queries
     query_bus.register(
         GetAllHelloWorldQuery,
-        container.get_all_hello_world_handler()
+        container.get_all_hello_world_query_handler()
     )
     query_bus.register(
         GetHelloWorldByIdQuery,
-        container.get_hello_world_by_id_handler()
+        container.get_hello_world_by_id_query_handler()
     )
     query_bus.register(
         SearchHelloWorldQuery,
-        container.search_hello_world_handler()
+        container.search_hello_world_query_handler()
     )

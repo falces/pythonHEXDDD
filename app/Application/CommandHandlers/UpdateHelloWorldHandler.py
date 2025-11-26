@@ -17,11 +17,11 @@ class UpdateHelloWorldHandler:
 
     def __init__(
         self,
-        repository: HelloWorldRepositoryInterface,
+        write_repository: HelloWorldRepositoryInterface,
         read_repository: HelloWorldReadRepository,
         event_dispatcher: EventDispatcherInterface
     ):
-        self.repository = repository
+        self.write_repository = write_repository
         self.read_repository = read_repository
         self.event_dispatcher = event_dispatcher
 
@@ -52,7 +52,7 @@ class UpdateHelloWorldHandler:
         hello_world.greeting = new_greeting
 
         # 4. Persistir cambios
-        self.repository.save(hello_world)
+        self.write_repository.save(hello_world)
 
         # 5. Publicar eventos si los hay
         events = hello_world.pull_domain_events()

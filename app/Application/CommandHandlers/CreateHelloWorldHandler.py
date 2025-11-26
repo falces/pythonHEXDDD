@@ -17,10 +17,10 @@ class CreateHelloWorldHandler:
 
     def __init__(
         self,
-        repository: HelloWorldRepositoryInterface,
+        write_repository: HelloWorldRepositoryInterface,
         event_dispatcher: EventDispatcherInterface
     ):
-        self.repository = repository
+        self.write_repository = write_repository
         self.event_dispatcher = event_dispatcher
 
     def handle(self, command: CreateHelloWorldCommand) -> int:
@@ -43,7 +43,7 @@ class CreateHelloWorldHandler:
         hello_world = HelloWorld.create(greeting=greeting)
 
         # 3. Persistir a través del repositorio
-        saved_entity = self.repository.save(hello_world)
+        saved_entity = self.write_repository.save(hello_world)
 
         # 4. Marcar como creado para registrar el evento (ahora que tenemos el ID)
         saved_entity.mark_as_created(saved_entity.id)
