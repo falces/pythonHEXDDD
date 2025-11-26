@@ -16,7 +16,8 @@ def tools_index():
     """Lista de herramientas disponibles."""
     return {
         "tools": [
-            {"name": "Site Map", "url": "/tools/site-map", "description": "Lista todas las rutas de la API"}
+            {"name": "Site Map", "url": "/tools/site-map",
+                "description": "Lista todas las rutas de la API"}
         ]
     }
 
