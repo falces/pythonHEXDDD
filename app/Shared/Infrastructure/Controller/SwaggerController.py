@@ -2,7 +2,7 @@
 Controlador para servir la documentación Swagger UI.
 """
 
-from flask import Blueprint, send_from_directory
+from flask import Blueprint, send_from_directory, make_response
 from flask_swagger_ui import get_swaggerui_blueprint
 import os
 
@@ -36,11 +36,14 @@ def serve_openapi_spec():
     """
     Sirve el archivo de especificación OpenAPI.
     """
-    # Obtener la ruta del directorio APIDocs
-    docs_dir = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-        '..',
-        'APIDocs'
-    )
-    
-    return send_from_directory(docs_dir, 'apidoc.yaml')
+    # SwaggerController.py está en: app/Shared/Infrastructure/Controller/
+    # APIDocs está en: app/APIDocs/
+    current_dir = os.path.dirname(__file__)
+    # Subir 3 niveles: Controller -> Infrastructure -> Shared -> app
+    app_dir = os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))
+    docs_dir = os.path.join(app_dir, 'APIDocs')
+
+    response = make_response(send_from_directory(docs_dir, 'apidoc.yaml'))
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Content-Type'] = 'application/yaml'
+    return response
