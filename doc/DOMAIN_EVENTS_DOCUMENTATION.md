@@ -316,27 +316,23 @@ app/
 ├── Shared/
 │   ├── Domain/
 │   │   ├── Events/
-│   │   │   ├── __init__.py
 │   │   │   ├── DomainEvent.py              # Clase base
 │   │   │   └── DomainEventSubscriber.py    # Interface handler
 │   │   └── Entities/
 │   │       └── EntityBase.py               # AggregateRootBase
 │   └── Infrastructure/
 │       └── Events/
-│           ├── __init__.py
 │           └── EventDispatcher.py          # Dispatcher
 │
 ├── Domain/
 │   └── HelloWorld/
 │       ├── Events/
-│       │   ├── __init__.py
 │       │   ├── HelloWorldCreated.py        # Evento específico
 │       │   └── HelloWorldDeleted.py        # Evento específico
 │       └── HelloWorld.py                   # Aggregate Root
 │
 ├── Application/
 │   ├── EventHandlers/
-│   │   ├── __init__.py
 │   │   ├── HelloWorldCreatedLogger.py      # Handler
 │   │   └── HelloWorldDeletedLogger.py      # Handler
 │   └── UseCases/

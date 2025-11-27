@@ -1,3 +1,0 @@
-"""
-Application Use Cases Package
-"""
