@@ -5,7 +5,6 @@ Handler para procesar el comando UpdateHelloWorldCommand.
 from Application.Commands.UpdateHelloWorldCommand import UpdateHelloWorldCommand
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
-from Domain.HelloWorld.HelloWorldReadRepositoryInterface import HelloWorldReadRepositoryInterface
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 from Shared.Application.CommandHandler import CommandHandler
 
@@ -13,17 +12,15 @@ from Shared.Application.CommandHandler import CommandHandler
 class UpdateHelloWorldHandler(CommandHandler):
     """
     Maneja la actualización de HelloWorld.
-    En CQRS puro: usa read_repository para validación y write_repository para persistir.
+    Usa write_repository para cargar y persistir la entidad de dominio.
     """
 
     def __init__(
         self,
         write_repository: HelloWorldRepositoryInterface,
-        read_repository: HelloWorldReadRepositoryInterface,
         event_dispatcher: EventDispatcherInterface
     ):
         self.write_repository = write_repository
-        self.read_repository = read_repository
         self.event_dispatcher = event_dispatcher
 
     def handle(self, command: UpdateHelloWorldCommand) -> bool:
@@ -40,8 +37,8 @@ class UpdateHelloWorldHandler(CommandHandler):
             ValueError: Si la entidad no existe
             IncorrectGreetingException: Si el greeting es inválido
         """
-        # 1. Buscar entidad existente usando read repository (CQRS puro)
-        hello_world = self.read_repository.find_by_id(command.id)
+        # 1. Buscar entidad de dominio usando write repository
+        hello_world = self.write_repository.find_by_id(command.id)
 
         if hello_world is None:
             raise ValueError(f"HelloWorld with id {command.id} not found")

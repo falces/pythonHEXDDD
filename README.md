@@ -374,27 +374,26 @@ def subscribed_to(self):
                      ▼
 4. Command Handler procesa (ej: Update/Delete)
    └─► Application/CommandHandlers/UpdateHelloWorldHandler.py
-         ├─► Valida existencia con Read Repository
-         │     └─► read_repository.find_by_id(id)  ⬅️ CQRS Puro
-         │           └─► Solo para validación, NO para modificar
+         ├─► Obtiene entidad de dominio con Write Repository
+         │     └─► write_repository.find_by_id(id)
+         │           └─► Devuelve entidad de dominio (con eventos)
          │
          ├─► Crea Value Object: Greeting.create()
          ├─► Modifica Entidad: hello_world.greeting = new_greeting
          ├─► Persiste con Write Repository
-         │     └─► repository.save(hello_world)  ⬅️ CQRS Puro
+         │     └─► write_repository.save(hello_world)
          │           └─► Infrastructure/Repository/HelloWorldWriteRepository.py
-         │                 ├─► Solo métodos: save() y delete()
-         │                 ├─► NO tiene findById() ni findAll()
-         │                 └─► Optimizado SOLO para escritura
+         │                 ├─► Métodos: find_by_id(), save(), delete()
+         │                 └─► Devuelve entidades de dominio
          │
          ├─► Publica eventos: event_dispatcher.publish_multiple()
          └─► Retorna resultado (ID o booleano)
                │
                ▼
-5. Write Repository persiste (SOLO escritura)
+5. Write Repository persiste
    └─► Infrastructure/Repository/HelloWorldWriteRepository.py
-         ├─► Métodos disponibles: save(), delete()
-         ├─► Métodos ELIMINADOS: find_by_id(), find_all() ⬅️ CQRS Puro
+         ├─► Métodos disponibles: find_by_id(), save(), delete()
+         ├─► Devuelve entidades de DOMINIO (no ReadModels)
          ├─► Mantiene integridad de dominio
          └─► Ejecuta: db.session.commit()
                │
@@ -407,18 +406,16 @@ def subscribed_to(self):
          └─► Puede indexar (Elasticsearch)
 ```
 
-**✅ Separación CQRS Pura en Command Handlers:**
+**✅ Separación CQRS en Command Handlers:**
 
 ```python
-# UpdateHelloWorldHandler recibe AMBOS repositorios
+# UpdateHelloWorldHandler usa write_repository para entidades de dominio
 def __init__(
     self,
-    repository: HelloWorldRepositoryInterface,      # Write Repository
-    read_repository: HelloWorldReadRepository,     # Read Repository
+    write_repository: HelloWorldRepositoryInterface,  # Write Repository
     event_dispatcher: EventDispatcher
 ):
-    self.repository = repository           # Para save()
-    self.read_repository = read_repository # Para validaciones (find_by_id)
+    self.write_repository = write_repository  # find_by_id(), save(), delete()
 ```
 
 #### 5.2 Flujo de Query (Lectura)
@@ -486,25 +483,28 @@ def __init__(
 | **Separación CQRS Pura** | ✅ Write Repository sin métodos de lectura | ✅ Read Repository solo para queries |
 | **Validaciones en Handlers** | Usa Read Repository para verificar existencia | N/A |
 
-**✅ Implementación CQRS Pura:**
+**✅ Implementación CQRS:**
 
-El proyecto implementa **CQRS Puro** con separación estricta:
+El proyecto implementa **CQRS** con separación de responsabilidades:
 
-- **Write Repository** (`HelloWorldRepository`):
-  - ✅ Métodos: `save()`, `delete()`
-  - ❌ Eliminados: `find_by_id()`, `find_all()`
-  - Solo para operaciones de escritura (CUD)
+- **Write Repository** (`HelloWorldWriteRepository`):
+  - ✅ Métodos: `find_by_id()`, `save()`, `delete()`
+  - Devuelve **Entidades de Dominio** (con eventos y comportamiento)
+  - Para operaciones de escritura (CUD)
 
 - **Read Repository** (`HelloWorldReadRepository`):
   - ✅ Métodos: `find_by_id()`, `find_all()`, `search()`
+  - Devuelve **ReadModels** (solo datos, sin comportamiento)
   - Solo para operaciones de lectura
   - Optimizado con índices y queries específicas
 
-- **Command Handlers** (UpdateHelloWorldHandler, DeleteHelloWorldHandler):
-  - Inyectan **ambos repositorios**:
-    - `repository` (write) para persistir
-    - `read_repository` (read) para validaciones
-  - Mantienen separación: lecturas usan read, escrituras usan write
+- **Command Handlers** (CreateHelloWorldHandler, UpdateHelloWorldHandler, DeleteHelloWorldHandler):
+  - Inyectan `write_repository` para obtener y persistir entidades de dominio
+  - Las entidades de dominio tienen `pull_domain_events()` para eventos
+
+- **Query Handlers** (GetAllHelloWorldHandler, GetHelloWorldByIdHandler, SearchHelloWorldHandler):
+  - Inyectan `read_repository` para consultas optimizadas
+  - Devuelven ReadModels (datos planos para respuesta)
 
 ---
 
@@ -663,56 +663,78 @@ app/
 
 #### CQRS (Command Query Responsibility Segregation) - **Implementación Pura** ✅
 
-El proyecto implementa **CQRS Puro** con separación estricta entre operaciones de escritura y lectura:
+El proyecto implementa **CQRS** con separación entre operaciones de escritura y lectura:
 
 - **Commands**: Modifican estado (Create, Update, Delete)
   - Pasan por validaciones de dominio
   - Publican eventos de dominio
-  - Usan **Write Repository** (solo `save()` y `delete()`)
-  - **Validaciones** usan **Read Repository** para verificar existencia
-  - Inyectan ambos repositorios cuando necesitan leer para validar
+  - Usan **Write Repository** (`find_by_id()`, `save()`, `delete()`)
+  - Write Repository devuelve **Entidades de Dominio** (con eventos)
   
 - **Queries**: Solo leen datos (Get, Search)
   - Sin lógica de negocio
   - Optimizadas para lectura
   - Usan **Read Repository** (solo métodos de consulta)
-  - Retornan DTOs (Read Models)
+  - Read Repository devuelve **ReadModels** (datos planos)
 
 **Separación en Repositorios:**
 
 ```python
-# Write Repository - SOLO escritura
-class HelloWorldRepository:
-    def save(self, entity): ...    # ✅ Persistir
+# Write Repository - Entidades de DOMINIO (para modificar)
+class HelloWorldWriteRepository:
+    def find_by_id(self, id): ...   # ✅ Obtener entidad de dominio
+    def save(self, entity): ...     # ✅ Persistir
     def delete(self, id): ...       # ✅ Eliminar
-    # ❌ NO tiene find_by_id() ni find_all()
 
-# Read Repository - SOLO lectura  
+# Read Repository - ReadModels (para consultar)  
 class HelloWorldReadRepository:
-    def find_by_id(self, id): ...   # ✅ Buscar por ID
-    def find_all(...): ...          # ✅ Listar todos
-    def search(...): ...            # ✅ Buscar con filtros
-    # ❌ NO tiene save() ni delete()
+    def find_by_id(self, id): ...   # ✅ Buscar por ID → ReadModel
+    def find_all(...): ...          # ✅ Listar todos → ReadModel
+    def search(...): ...            # ✅ Buscar con filtros → ReadModel
 ```
 
-**Validaciones en Command Handlers:**
+#### Entidad de Dominio vs ReadModel
+
+| Aspecto | Entidad de Dominio | ReadModel |
+|---------|-------------------|-----------|
+| **Propósito** | Modificar estado y lógica de negocio | Mostrar datos (solo lectura) |
+| **Comportamiento** | Métodos de negocio, validaciones | Ninguno (solo datos) |
+| **Eventos** | `pull_domain_events()`, `record_event()` | No tiene |
+| **Value Objects** | Usa VOs para validaciones estrictas | Datos planos (strings, ints) |
+| **Repositorio** | `WriteRepository.find_by_id()` | `ReadRepository.find_by_id()` |
 
 ```python
-# UpdateHelloWorldHandler - Usa ambos repositorios
+# Entidad de Dominio (HelloWorld) - Para Command Handlers
+entity = write_repository.find_by_id(1)
+entity.greeting = GreetingValueObject.create("Updated")  # ✅ Value Object
+entity.pull_domain_events()  # ✅ Tiene eventos
+
+# ReadModel (HelloWorldReadModel) - Para Query Handlers
+read_model = read_repository.find_by_id(1)
+read_model.greeting  # Solo string "Updated"
+read_model.pull_domain_events()  # ❌ NO EXISTE - Error!
+```
+
+**Command Handlers - Entidad de Dominio vs ReadModel:**
+
+```python
+# UpdateHelloWorldHandler - Usa write_repository para entidades de dominio
 class UpdateHelloWorldHandler:
-    def __init__(self, repository, read_repository, event_dispatcher):
-        self.repository = repository              # Write Repository
-        self.read_repository = read_repository    # Read Repository
+    def __init__(self, write_repository, event_dispatcher):
+        self.write_repository = write_repository  # Entidades de dominio
     
     def handle(self, command):
-        # 1. Validar existencia con Read Repository
-        entity = self.read_repository.find_by_id(command.id)  # ✅ Lectura
+        # 1. Obtener entidad de DOMINIO (tiene eventos, comportamiento)
+        entity = self.write_repository.find_by_id(command.id)
         
         # 2. Modificar entidad (dominio)
         entity.greeting = new_greeting
         
         # 3. Persistir con Write Repository
-        self.repository.save(entity)  # ✅ Escritura
+        self.write_repository.save(entity)
+        
+        # 4. Publicar eventos de dominio
+        events = entity.pull_domain_events()  # ✅ Solo entidades tienen esto
 ```
 
 **Beneficios de CQRS Puro:**

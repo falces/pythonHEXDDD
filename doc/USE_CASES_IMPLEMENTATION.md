@@ -228,13 +228,15 @@ class UpdateHelloWorldCommand:
 ```python
 # Application/CommandHandlers/UpdateHelloWorldHandler.py
 class UpdateHelloWorldHandler(CommandHandler):
-    def __init__(self, write_repository, read_repository, event_dispatcher):
-        self.write_repository = write_repository
-        self.read_repository = read_repository
+    def __init__(self, write_repository, event_dispatcher):
+        self.write_repository = write_repository  # Entidades de dominio
         self.event_dispatcher = event_dispatcher
     
-    def handle(self, command: UpdateHelloWorldCommand) -> int:
-        # Lógica de actualización
+    def handle(self, command: UpdateHelloWorldCommand) -> bool:
+        # 1. Obtener entidad de dominio
+        entity = self.write_repository.find_by_id(command.id)
+        # 2. Modificar y persistir
+        # 3. Publicar eventos
         pass
 ```
 

@@ -2,6 +2,7 @@ from flask import Blueprint, request, current_app
 from Infrastructure.Controller.ControllerBase import ControllerBase
 from Domain.HelloWorld.Exceptions.IncorrectGreetingException import IncorrectGreetingException
 from Application.Commands.CreateHelloWorldCommand import CreateHelloWorldCommand
+from Application.Commands.UpdateHelloWorldCommand import UpdateHelloWorldCommand
 from Application.Commands.DeleteHelloWorldCommand import DeleteHelloWorldCommand
 from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
 from Application.Queries.GetHelloWorldByIdQuery import GetHelloWorldByIdQuery
@@ -141,3 +142,52 @@ class HelloWorldController:
             {"message": "HelloWorld deleted successfully"},
             200
         )
+
+    @hello_world_controller.route('/<int:id>', methods=['PATCH'])
+    def update_hello_world(id: int):
+        """
+        Edita un HelloWorld usando CQRS.
+
+        POST /api/v1/hello-world/{id}
+        Body: {
+            "greeting": "Modified greeting!"
+        }
+        """
+        try:
+            # Obtener datos del request
+            data = request.get_json()
+
+            if not data or 'greeting' not in data:
+                return ControllerBase.format_response(
+                    {"error": "Field 'greeting' is required"},
+                    400
+                )
+
+            # Crear el comando CQRS
+            command = UpdateHelloWorldCommand(
+                id=id,
+                greeting_text=data['greeting']
+            )
+
+            # Obtener el Command Bus y despachar
+            command_bus = current_app.container.command_bus()
+            entity_id = command_bus.dispatch(command)
+
+            # Usar QueryBus para obtener la entidad creada
+            query = GetHelloWorldByIdQuery(id=entity_id)
+            query_bus = current_app.container.query_bus()
+            updated_entity = query_bus.dispatch(query)
+
+            return ControllerBase.format_response(
+                updated_entity,
+                201
+            )
+
+        except IncorrectGreetingException as e:
+            return ControllerBase.format_response({"error": str(e)}, 400)
+
+        except Exception as e:
+            return ControllerBase.format_response(
+                {"error": str(e)},
+                500
+            )

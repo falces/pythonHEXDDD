@@ -13,6 +13,18 @@ class HelloWorldWriteRepository(HelloWorldRepositoryInterface):
     Para operaciones de lectura, usar HelloWorldReadRepository.
     """
 
+    def find_by_id(self, id: int) -> Optional[HelloWorld]:
+        """
+        Busca una entidad HelloWorld por su ID.
+        Necesario para cargar la entidad de dominio antes de modificarla.
+        """
+        model = db.session.query(HelloWorldModel).filter_by(id=id).first()
+
+        if model is None:
+            return None
+
+        return HelloWorldMapper.toDomain(model)
+
     def save(self, hello_world: HelloWorld) -> HelloWorld:
         """
         Persiste una entidad HelloWorld en la base de datos.

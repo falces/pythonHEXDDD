@@ -225,11 +225,16 @@ class GetAllHelloWorldHandler(QueryHandler):
 
 ## 📊 Separación Write/Read
 
-### Write Repository (Commands)
+### Write Repository (Commands) - Entidades de Dominio
 
 ```python
 # Domain/HelloWorld/HelloWorldRepositoryInterface.py
 class HelloWorldRepositoryInterface(ABC):
+    @abstractmethod
+    def find_by_id(self, id: int) -> Optional[HelloWorld]:
+        """Devuelve Entidad de Dominio (con eventos y comportamiento)"""
+        pass
+
     @abstractmethod
     def save(self, hello_world: HelloWorld) -> HelloWorld:
         pass
@@ -239,13 +244,14 @@ class HelloWorldRepositoryInterface(ABC):
         pass
 ```
 
-### Read Repository (Queries)
+### Read Repository (Queries) - ReadModels
 
 ```python
 # Domain/HelloWorld/HelloWorldReadRepositoryInterface.py
 class HelloWorldReadRepositoryInterface(ABC):
     @abstractmethod
     def find_by_id(self, id: int) -> Optional[any]:
+        """Devuelve ReadModel (solo datos, sin comportamiento)"""
         pass
 
     @abstractmethod
@@ -260,6 +266,15 @@ class HelloWorldReadRepositoryInterface(ABC):
     def count(self) -> int:
         pass
 ```
+
+### Diferencia clave: Entidad de Dominio vs ReadModel
+
+| Write Repository | Read Repository |
+|-----------------|-----------------|
+| Devuelve `HelloWorld` (entidad) | Devuelve `HelloWorldReadModel` |
+| Tiene `pull_domain_events()` | Solo datos planos |
+| Usa Value Objects | Usa tipos primitivos |
+| Para Command Handlers | Para Query Handlers |
 
 ---
 

@@ -102,7 +102,6 @@ class Container(containers.DeclarativeContainer):
     update_hello_world_command_handler = providers.Factory(
         UpdateHelloWorldHandler,
         write_repository=hello_world_write_repository,
-        read_repository=hello_world_read_repository,
         event_dispatcher=event_dispatcher
     )
 

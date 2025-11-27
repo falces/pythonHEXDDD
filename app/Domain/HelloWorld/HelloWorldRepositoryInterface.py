@@ -10,13 +10,26 @@ class HelloWorldRepositoryInterface(ABC):
     """
 
     @abstractmethod
+    def find_by_id(self, id: int) -> Optional[HelloWorld]:
+        """
+        Busca una entidad HelloWorld por su ID.
+
+        Args:
+            id: Identificador de la entidad
+
+        Returns:
+            HelloWorld: Entidad de dominio o None si no existe
+        """
+        pass
+
+    @abstractmethod
     def save(self, hello_world: HelloWorld) -> HelloWorld:
         """
         Persiste una entidad HelloWorld.
-        
+
         Args:
             hello_world: Entidad a persistir
-            
+
         Returns:
             HelloWorld: Entidad persistida con ID asignado
         """
@@ -26,10 +39,10 @@ class HelloWorldRepositoryInterface(ABC):
     def delete(self, id: int) -> bool:
         """
         Elimina una entidad por su ID.
-        
+
         Args:
             id: Identificador de la entidad
-            
+
         Returns:
             bool: True si se eliminó correctamente
         """

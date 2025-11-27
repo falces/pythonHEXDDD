@@ -83,17 +83,14 @@ class TestUpdateHelloWorldHandler:
         existing_hello_world._id = 1
 
         mock_repository = Mock()
+        mock_repository.find_by_id = Mock(return_value=existing_hello_world)
         mock_repository.save = Mock(return_value=existing_hello_world)
-
-        mock_read_repository = Mock()
-        mock_read_repository.find_by_id = Mock(
-            return_value=existing_hello_world)
 
         mock_event_dispatcher = Mock()
         mock_event_dispatcher.publish_multiple = Mock()
 
         handler = UpdateHelloWorldHandler(
-            mock_repository, mock_read_repository, mock_event_dispatcher)
+            mock_repository, mock_event_dispatcher)
         command = UpdateHelloWorldCommand(id=1, greeting_text="Updated")
 
         # Act
@@ -101,7 +98,7 @@ class TestUpdateHelloWorldHandler:
 
         # Assert
         assert result is True
-        mock_read_repository.find_by_id.assert_called_once_with(1)
+        mock_repository.find_by_id.assert_called_once_with(1)
         mock_repository.save.assert_called_once()
 
         # El handler modifica la entidad directamente
@@ -111,14 +108,12 @@ class TestUpdateHelloWorldHandler:
         """Debe lanzar error cuando no encuentra la entidad"""
         # Arrange
         mock_repository = Mock()
-
-        mock_read_repository = Mock()
-        mock_read_repository.find_by_id = Mock(return_value=None)
+        mock_repository.find_by_id = Mock(return_value=None)
 
         mock_event_dispatcher = Mock()
 
         handler = UpdateHelloWorldHandler(
-            mock_repository, mock_read_repository, mock_event_dispatcher)
+            mock_repository, mock_event_dispatcher)
         command = UpdateHelloWorldCommand(id=999, greeting_text="Test")
 
         # Act & Assert
@@ -136,16 +131,13 @@ class TestUpdateHelloWorldHandler:
         existing_hello_world.pull_domain_events()
 
         mock_repository = Mock()
-
-        mock_read_repository = Mock()
-        mock_read_repository.find_by_id = Mock(
-            return_value=existing_hello_world)
+        mock_repository.find_by_id = Mock(return_value=existing_hello_world)
 
         mock_event_dispatcher = Mock()
         mock_event_dispatcher.publish_multiple = Mock()
 
         handler = UpdateHelloWorldHandler(
-            mock_repository, mock_read_repository, mock_event_dispatcher)
+            mock_repository, mock_event_dispatcher)
         command = UpdateHelloWorldCommand(id=1, greeting_text="Updated")
 
         # Act
