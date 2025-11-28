@@ -38,6 +38,7 @@ from Application.UseCases.Shows.GetShowByIdUseCase import GetShowByIdUseCase
 from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
 from Application.EventHandlers.HelloWorldCreatedLogger import HelloWorldCreatedLogger
 from Application.EventHandlers.HelloWorldDeletedLogger import HelloWorldDeletedLogger
+from Application.EventHandlers.HelloWorldUpdatedLogger import HelloWorldUpdatedLogger
 from Infrastructure.Projections.HelloWorldProjection import HelloWorldProjection
 
 
@@ -70,6 +71,10 @@ class Container(containers.DeclarativeContainer):
 
     hello_world_deleted_logger = providers.Factory(
         HelloWorldDeletedLogger
+    )
+
+    hello_world_updated_logger = providers.Factory(
+        HelloWorldUpdatedLogger
     )
 
     # ========== REPOSITORIES ==========
@@ -211,6 +216,7 @@ def _register_event_handlers(container: Container) -> None:
     # Suscribir handlers de HelloWorld
     dispatcher.subscribe(container.hello_world_created_logger())
     dispatcher.subscribe(container.hello_world_deleted_logger())
+    dispatcher.subscribe(container.hello_world_updated_logger())
 
     # Suscribir projection para actualizar read models
     dispatcher.subscribe(container.hello_world_projection())

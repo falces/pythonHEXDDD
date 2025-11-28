@@ -46,8 +46,8 @@ class UpdateHelloWorldHandler(CommandHandler):
         # 2. Crear nuevo Value Object con validaciones
         new_greeting = GreetingValueObject.create(command.greeting_text)
 
-        # 3. Actualizar la entidad
-        hello_world.greeting = new_greeting
+        # 3. Actualizar la entidad (esto registra el evento HelloWorldUpdated)
+        hello_world.update_greeting(new_greeting)
 
         # 4. Persistir cambios
         self.write_repository.save(hello_world)

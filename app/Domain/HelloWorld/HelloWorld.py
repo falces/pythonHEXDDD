@@ -1,5 +1,6 @@
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Domain.HelloWorld.Events.HelloWorldCreated import HelloWorldCreated
+from Domain.HelloWorld.Events.HelloWorldUpdated import HelloWorldUpdated
 from Shared.Domain.Entities.EntityBase import AggregateRootBase
 
 
@@ -46,6 +47,20 @@ class HelloWorld(AggregateRootBase):
         event = HelloWorldCreated(
             hello_world_id=id,
             greeting=self.greeting.value
+        )
+        self.record_event(event)
+
+    def update_greeting(self, new_greeting: GreetingValueObject) -> None:
+        """
+        Actualiza el greeting y registra el evento de dominio.
+
+        Args:
+            new_greeting: El nuevo valor del greeting
+        """
+        self.greeting = new_greeting
+        event = HelloWorldUpdated(
+            hello_world_id=self._id,
+            greeting=new_greeting.value
         )
         self.record_event(event)
 
