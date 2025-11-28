@@ -3,9 +3,9 @@ info:
   title: PythonHEXDDD API
   description: |
     API RESTful implementada con arquitectura hexagonal (Clean Architecture) y Domain-Driven Design.
-    
+
     ## Características
-    
+
     - Arquitectura Hexagonal (Puertos y Adaptadores)
     - Domain-Driven Design (DDD)
     - **CQRS Completo** (Command Query Responsibility Segregation)
@@ -15,11 +15,11 @@ info:
     - Dependency Injection Container
     - Repository Pattern (Write/Read separation)
     - Event Sourcing con Projections
-    
+
     ## Autenticación
-    
+
     Actualmente la API no requiere autenticación (para propósitos de desarrollo).
-    
+
   version: 1.0.0
   contact:
     name: API Support
@@ -49,33 +49,33 @@ paths:
       description: Retorna una lista de todas las entidades HelloWorld registradas en el sistema
       operationId: getAllHelloWorld
       responses:
-        '200':
+        "200":
           description: Lista de HelloWorld obtenida exitosamente
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/HelloWorld'
+                  $ref: "#/components/schemas/HelloWorld"
               example:
                 - id: 1
                   greeting: "Hello World"
                 - id: 2
                   greeting: "Hola Mundo"
-        '500':
+        "500":
           description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-    
+                $ref: "#/components/schemas/Error"
+
     post:
       tags:
         - HelloWorld
       summary: Crear nuevo HelloWorld (CQRS)
       description: |
         Crea una nueva entidad HelloWorld con el greeting proporcionado.
-        
+
         **Patrón CQRS implementado:**
         - Crea un `CreateHelloWorldCommand`
         - Lo despacha a través del `Command Bus`
@@ -107,30 +107,30 @@ paths:
                 value:
                   greeting: "¡Hola Mundo! 你好世界"
       responses:
-        '201':
+        "201":
           description: HelloWorld creado exitosamente
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HelloWorld'
+                $ref: "#/components/schemas/HelloWorld"
               example:
                 id: 3
                 greeting: "Hello from Spain"
-        '400':
+        "400":
           description: Petición inválida (greeting vacío o faltante)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Field 'greeting' is required"
-        '500':
+        "500":
           description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  
+                $ref: "#/components/schemas/Error"
+
   /api/v1/hello-world/{id}:
     get:
       tags:
@@ -149,30 +149,99 @@ paths:
             minimum: 1
           example: 1
       responses:
-        '200':
+        "200":
           description: HelloWorld encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HelloWorld'
+                $ref: "#/components/schemas/HelloWorld"
               example:
                 id: 1
                 greeting: "Hello World"
-        '404':
+        "404":
           description: HelloWorld no encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "HelloWorld not found"
-        '500':
+        "500":
           description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-    
+                $ref: "#/components/schemas/Error"
+    patch:
+      tags:
+        - HelloWorld
+      summary: Actualizar HelloWorld parcialmente
+      description: |
+        Actualiza parcialmente una entidad HelloWorld.
+
+        **Patrón CQRS implementado:**
+        - Crea un `UpdateHelloWorldCommand`
+        - Lo despacha a través del `Command Bus`
+        - El `UpdateHelloWorldHandler` procesa el comando
+      operationId: updateHelloWorld
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID del HelloWorld a actualizar
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+          example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                greeting:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                  description: Nuevo texto del saludo
+                  example: "Hello Updated"
+            example:
+              greeting: "Hello Updated"
+      responses:
+        "200":
+          description: HelloWorld actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HelloWorld"
+              example:
+                id: 1
+                greeting: "Hello Updated"
+        "400":
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Invalid input"
+        "404":
+          description: HelloWorld no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "HelloWorld not found"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
     delete:
       tags:
         - HelloWorld
@@ -190,7 +259,7 @@ paths:
             minimum: 1
           example: 1
       responses:
-        '200':
+        "200":
           description: HelloWorld eliminado exitosamente
           content:
             application/json:
@@ -200,21 +269,21 @@ paths:
                   message:
                     type: string
                     example: "HelloWorld deleted successfully"
-        '404':
+        "404":
           description: HelloWorld no encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "HelloWorld not found"
-        '500':
+        "500":
           description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  
+                $ref: "#/components/schemas/Error"
+
   /api/v1/movies/:
     get:
       tags:
@@ -231,7 +300,7 @@ paths:
           required: false
           schema:
             type: string
-            pattern: '^[a-z]{2}$'
+            pattern: "^[a-z]{2}$"
             example: "us"
         - name: showType
           in: query
@@ -242,14 +311,14 @@ paths:
             enum: [movie, series]
             example: "movie"
       responses:
-        '200':
+        "200":
           description: Lista de shows encontrados
           content: # El ejemplo debe estar dentro del content type
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Show'
+                  $ref: "#/components/schemas/Show"
               example: # Ejemplo movido a la posición correcta
                 - id: "ts123456"
                   title: "The Matrix"
@@ -263,13 +332,13 @@ paths:
                   streamingOptions:
                     - service: "Amazon Prime"
                       type: "subscription"
-        '500':
+        "500":
           description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-  
+                $ref: "#/components/schemas/Error"
+
   /api/v1/movies/{show_id}:
     get:
       tags:
@@ -284,15 +353,15 @@ paths:
           description: ID único del show
           schema:
             type: string
-            pattern: '^ts[0-9]+$'
+            pattern: "^ts[0-9]+$"
           example: "ts123456"
       responses:
-        '200':
+        "200":
           description: Show encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Show'
+                $ref: "#/components/schemas/Show"
               example:
                 id: "ts123456"
                 title: "The Matrix"
@@ -302,20 +371,20 @@ paths:
                     type: "subscription"
                   - service: "Amazon Prime"
                     type: "rent"
-        '404':
+        "404":
           description: Show no encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
               example:
                 error: "Show not found"
-        '500':
+        "500":
           description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
+                $ref: "#/components/schemas/Error"
 
 components:
   schemas:
@@ -339,7 +408,7 @@ components:
       example:
         id: 1
         greeting: "Hello World"
-    
+
     Show:
       type: object
       required:
@@ -349,7 +418,7 @@ components:
       properties:
         id:
           type: string
-          pattern: '^ts[0-9]+$|^tt[0-9]+$' # Incluir formato 'tt' como en los documentos de refactor
+          pattern: "^ts[0-9]+$|^tt[0-9]+$" # Incluir formato 'tt' como en los documentos de refactor
           description: ID único del show (formato ThingStream)
           example: "ts123456"
         title:
@@ -365,7 +434,7 @@ components:
           type: array
           description: Opciones de streaming disponibles
           items:
-            $ref: '#/components/schemas/StreamingOption'
+            $ref: "#/components/schemas/StreamingOption"
       example:
         id: "ts123456"
         title: "The Matrix"
@@ -373,7 +442,7 @@ components:
         streamingOptions:
           - service: "Netflix"
             type: "subscription"
-    
+
     StreamingOption:
       type: object
       required:
@@ -398,7 +467,7 @@ components:
       example:
         service: "Netflix"
         type: "subscription"
-    
+
     Error:
       type: object
       required:
