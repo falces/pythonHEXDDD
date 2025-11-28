@@ -8,7 +8,6 @@ from unittest.mock import Mock
 from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
 from Domain.HelloWorld.Events.HelloWorldCreated import HelloWorldCreated
 from Domain.HelloWorld.Events.HelloWorldDeleted import HelloWorldDeleted
-from datetime import datetime
 
 
 class MockSingleEventSubscriber:

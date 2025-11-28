@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from Infrastructure.Persistence.database import db
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface

@@ -2,7 +2,6 @@
 Tests unitarios para la entidad Show.
 """
 
-import pytest
 from Domain.Show.Show import Show
 from Domain.Show.ValueObjects.ShowId import ShowId
 from Domain.Show.ValueObjects.ShowTitle import ShowTitle

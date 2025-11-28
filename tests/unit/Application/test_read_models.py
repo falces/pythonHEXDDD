@@ -3,7 +3,6 @@ Tests unitarios para Read Models (CQRS).
 Valida serialización y cálculos de paginación.
 """
 
-import pytest
 from datetime import datetime
 from Application.ReadModels.HelloWorldReadModel import HelloWorldReadModel
 from Application.ReadModels.HelloWorldListReadModel import HelloWorldListReadModel

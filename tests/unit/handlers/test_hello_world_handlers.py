@@ -2,8 +2,7 @@
 Tests unitarios para los Event Handlers de HelloWorld.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 from Domain.HelloWorld.Events.HelloWorldCreated import HelloWorldCreated
 from Domain.HelloWorld.Events.HelloWorldDeleted import HelloWorldDeleted
 from Application.EventHandlers.HelloWorldCreatedLogger import HelloWorldCreatedLogger

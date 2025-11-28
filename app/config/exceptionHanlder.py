@@ -1,6 +1,6 @@
 from flask import Flask
-from werkzeug.exceptions import HTTPException
 import traceback
+
 
 def exceptionHandler(app: Flask):
     @app.errorhandler(Exception)
@@ -8,9 +8,9 @@ def exceptionHandler(app: Flask):
         exceptionCode = e.code if hasattr(e, 'code') else 500
         exceptionMessage = str(e)
         response = {
-                    "error": exceptionMessage,
-                    "code": exceptionCode,
-                    "traceback": traceback.format_exc()
-                }
+            "error": exceptionMessage,
+            "code": exceptionCode,
+            "traceback": traceback.format_exc()
+        }
         app.logger.error(exceptionMessage)
         return response, exceptionCode

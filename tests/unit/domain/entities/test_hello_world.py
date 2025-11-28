@@ -2,7 +2,6 @@
 Tests unitarios para la entidad HelloWorld (Aggregate Root).
 """
 
-import pytest
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
 from Domain.HelloWorld.Events.HelloWorldCreated import HelloWorldCreated
