@@ -42,10 +42,14 @@ class AdminUserController:
             )
 
         except Exception as e:
+            status_code = 500
+            if hasattr(e, 'code') and isinstance(e.code, int) and 100 <= e.code < 600:
+                status_code = e.code
+            
             return ControllerBase.format_response(
                 {
                     "error": str(e),
                     "traceback": traceback.format_exc()
                 },
-                e.code if hasattr(e, 'code') else 500
+                status_code
             )
