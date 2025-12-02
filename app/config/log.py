@@ -28,6 +28,7 @@ def configureLogs(app: Flask):
 
     # Avoid APP logs
     logging.getLogger('werkzeug').disabled = True
+    logging.getLogger("mysql.connector").setLevel(logging.WARNING)
 
     @app.after_request
     def after_request(response):
