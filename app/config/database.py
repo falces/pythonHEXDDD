@@ -1,7 +1,7 @@
 from os import environ
 from flask import Flask
 from flask_migrate import Migrate
-from Infrastructure.Persistence.database import db
+from Shared.Infrastructure.Persistence.database import db
 
 
 def configureDatabase(app: Flask):
