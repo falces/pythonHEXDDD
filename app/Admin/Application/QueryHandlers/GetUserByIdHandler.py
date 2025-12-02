@@ -16,9 +16,11 @@ class GetUserByIdHandler(QueryHandler):
     def handle(
         self,
         query: GetUserByIdQuery,
-    ) -> Optional[UserReadModel]:
-        
+    ) -> Optional[dict]:
         user_model = self.read_repository.find_by_id(query.id)
         
-        return UserReadModel.to_dict(user_model)
+        if user_model is None:
+            return None
+        
+        return user_model.to_dict()
         

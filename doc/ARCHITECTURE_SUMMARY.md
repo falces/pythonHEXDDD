@@ -1,14 +1,32 @@
 # 📐 Resumen de Arquitectura - Python HEX DDD CQRS
 
-## ✅ Estado de Validación (Actualizado: 26 Nov 2025)
+## ✅ Estado de Validación (Actualizado: 02 Dic 2025)
 
 | Patrón | Estado | Notas |
 |--------|--------|-------|
 | **Arquitectura Hexagonal** | ✅ Completo | Capas bien separadas |
 | **DDD** | ✅ Completo | Aggregate Roots, Value Objects, Domain Events |
 | **CQRS** | ✅ Completo | CommandBus + QueryBus con interfaces |
+| **Arquitectura Modular** | ✅ Nuevo | Módulos independientes (HelloWorld, Admin) |
 | **Dependency Inversion** | ✅ Completo | Todas las dependencias usan interfaces |
-| **Tests** | ✅ 145/145 pasando | 93.84% cobertura |
+| **Tests** | ✅ 198/198 pasando | 85%+ cobertura |
+
+---
+
+## 🏗️ Módulos del Sistema
+
+### Módulo HelloWorld (Principal)
+- Ubicación: `app/Domain/HelloWorld/`, `app/Application/`, `app/Infrastructure/`
+- Entidad: `HelloWorld` (Aggregate Root)
+- CQRS: Commands, Queries, Handlers completos
+- Events: `HelloWorldCreated`, `HelloWorldUpdated`, `HelloWorldDeleted`
+
+### Módulo Admin (Nuevo)
+- Ubicación: `app/Admin/` (estructura autocontenida)
+- Entidad: `User` (Aggregate Root)
+- CQRS: Commands, Queries, Handlers
+- Events: `UserCreated`
+- Value Objects: `UsernameValueObject`, `EmailValueObject`, `UuidValueObject`
 
 ---
 
@@ -165,7 +183,43 @@ class HelloWorldReadRepositoryInterface(ABC):
 
 ```
 app/
-├── Application/                    # Capa de Aplicación
+├── Admin/                          # 🆕 Módulo Admin (autocontenido)
+│   ├── Application/
+│   │   ├── Commands/
+│   │   │   └── CreateUserCommand.py
+│   │   ├── CommandHandlers/
+│   │   │   └── CreateUserHandler.py
+│   │   ├── Queries/
+│   │   │   └── GetUserByIdQuery.py
+│   │   ├── QueryHandlers/
+│   │   │   └── GetUserByIdHandler.py
+│   │   └── ReadModels/
+│   │       └── UserReadModel.py
+│   ├── Domain/
+│   │   ├── User.py                 # Aggregate Root
+│   │   ├── UserWriteRepositoryInterface.py
+│   │   ├── UserReadRepositoryInterface.py
+│   │   ├── Events/
+│   │   │   └── UserCreated.py
+│   │   ├── Exceptions/
+│   │   │   ├── IncorrectUsernameException.py
+│   │   │   └── IncorrectEmailException.py
+│   │   └── ValueObjects/
+│   │       ├── UsernameValueObject.py
+│   │       └── EmailValueObject.py
+│   └── Infrastructure/
+│       ├── Controller/
+│       │   └── AdminUserController.py
+│       ├── Repository/
+│       │   ├── UserWriteRepository.py
+│       │   └── UserReadRepository.py
+│       └── Persistence/
+│           ├── SQLAlchemy/
+│           │   └── UserModel.py
+│           └── Mappers/
+│               └── UserMapper.py
+│
+├── Application/                    # Capa de Aplicación (HelloWorld)
 │   ├── Commands/                   # Comandos inmutables (dataclass frozen)
 │   │   ├── CreateHelloWorldCommand.py
 │   │   ├── UpdateHelloWorldCommand.py
@@ -183,23 +237,28 @@ app/
 │   │   ├── GetHelloWorldByIdHandler.py
 │   │   └── SearchHelloWorldHandler.py
 │   ├── ReadModels/                 # DTOs para lecturas
-│   │   └── HelloWorldReadModel.py
+│   │   ├── HelloWorldReadModel.py
+│   │   └── HelloWorldListReadModel.py
 │   ├── EventHandlers/              # Manejadores de eventos de dominio
 │   │   ├── HelloWorldCreatedLogger.py
+│   │   ├── HelloWorldUpdatedLogger.py
 │   │   └── HelloWorldDeletedLogger.py
 │   └── UseCases/                   # Use Cases (solo para módulos sin CQRS)
 │       └── Shows/                  # Shows aún usa Use Cases tradicionales
 │           ├── SearchShowsUseCase.py
 │           └── GetShowByIdUseCase.py
 │
-├── Domain/                         # Capa de Dominio (PURO)
+├── Domain/                         # Capa de Dominio (HelloWorld)
 │   ├── HelloWorld/
 │   │   ├── HelloWorld.py           # Aggregate Root
 │   │   ├── HelloWorldRepositoryInterface.py    # Puerto Write
 │   │   ├── HelloWorldReadRepositoryInterface.py # Puerto Read
 │   │   ├── Events/
 │   │   │   ├── HelloWorldCreated.py
+│   │   │   ├── HelloWorldUpdated.py
 │   │   │   └── HelloWorldDeleted.py
+│   │   ├── Exceptions/
+│   │   │   └── IncorrectGreetingException.py
 │   │   └── ValueObjects/
 │   │       └── GreetingValueObject.py
 │   └── Show/
@@ -263,21 +322,65 @@ app/
 # Ejecutar todos los tests unitarios
 pytest tests/unit/ -v
 
+# Tests del módulo Admin
+pytest tests/unit/Admin/ -v
+
 # Con cobertura
 pytest tests/unit/ --cov=app --cov-report=html
 
 # Tests específicos
 pytest tests/unit/Application/test_command_handlers.py -v
 pytest tests/unit/Application/test_query_handlers.py -v
+pytest tests/unit/Admin/Application/test_command_handlers.py -v
 ```
 
-**Resultado actual:** 145 tests pasando, 93.84% cobertura
+**Resultado actual:** 198 tests pasando, 85%+ cobertura
 
 ---
 
 ## 🚀 Cómo Agregar un Nuevo Módulo
 
-### 1. Domain Layer (primero)
+### Opción A: Módulo Autocontenido (Recomendado)
+
+Crear estructura completa bajo `app/NuevoModulo/`:
+
+```
+app/NuevoModulo/
+├── Application/
+│   ├── Commands/
+│   │   └── CreateEntityCommand.py
+│   ├── CommandHandlers/
+│   │   └── CreateEntityHandler.py
+│   ├── Queries/
+│   │   └── GetEntityByIdQuery.py
+│   ├── QueryHandlers/
+│   │   └── GetEntityByIdHandler.py
+│   └── ReadModels/
+│       └── EntityReadModel.py
+├── Domain/
+│   ├── Entity.py                   # Aggregate Root
+│   ├── EntityWriteRepositoryInterface.py
+│   ├── EntityReadRepositoryInterface.py
+│   ├── Events/
+│   │   └── EntityCreated.py
+│   ├── Exceptions/
+│   │   └── IncorrectFieldException.py
+│   └── ValueObjects/
+│       └── FieldValueObject.py
+└── Infrastructure/
+    ├── Controller/
+    │   └── EntityController.py
+    ├── Repository/
+    │   ├── EntityWriteRepository.py
+    │   └── EntityReadRepository.py
+    └── Persistence/
+        ├── SQLAlchemy/
+        │   └── EntityModel.py
+        └── Mappers/
+            └── EntityMapper.py
+```
+
+### Opción B: Módulo en estructura existente (Legacy)
 
 ```python
 # Domain/NewModule/NewEntity.py
@@ -291,39 +394,25 @@ class NewRepositoryInterface(ABC):
         pass
 ```
 
-### 2. Application Layer
-
-```python
-# Application/Commands/CreateNewEntityCommand.py
-@dataclass(frozen=True)
-class CreateNewEntityCommand:
-    field: str
-
-# Application/CommandHandlers/CreateNewEntityHandler.py
-class CreateNewEntityHandler(CommandHandler):
-    def __init__(self, repository: NewRepositoryInterface):
-        self.repository = repository
-    
-    def handle(self, command: CreateNewEntityCommand) -> int:
-        # Lógica de negocio
-        pass
-```
-
-### 3. Infrastructure Layer
-
-```python
-# Infrastructure/Repository/NewRepository.py
-class NewRepository(NewRepositoryInterface):
-    def save(self, entity: NewEntity) -> NewEntity:
-        # Implementación con SQLAlchemy
-        pass
-```
-
-### 4. Registrar en Container
+### Registrar en Container
 
 ```python
 # config/container.py
-command_bus.register(CreateNewEntityCommand, container.create_new_entity_handler())
+
+# Importar handlers del nuevo módulo
+from NuevoModulo.Application.CommandHandlers.CreateEntityHandler import CreateEntityHandler
+
+# Registrar en el container
+new_entity_write_repository = providers.Factory(EntityWriteRepository)
+create_entity_handler = providers.Factory(
+    CreateEntityHandler,
+    write_repository=new_entity_write_repository,
+    event_dispatcher=event_dispatcher
+)
+
+# Registrar en buses
+command_bus.register(CreateEntityCommand, container.create_entity_handler())
+query_bus.register(GetEntityByIdQuery, container.get_entity_by_id_handler())
 ```
 
 ---
@@ -336,4 +425,4 @@ command_bus.register(CreateNewEntityCommand, container.create_new_entity_handler
 
 ---
 
-**Última actualización: 26 de noviembre de 2025**
+**Última actualización: 02 de diciembre de 2025**

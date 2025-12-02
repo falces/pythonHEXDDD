@@ -41,7 +41,21 @@ mkdir -p /home/falces/Code/tools/pythonHEXDDD/app/log
 tests/
 ├── conftest.py                 # Fixtures globales
 ├── unit/                       # Tests unitarios (aislados con mocks)
-│   ├── Application/
+│   ├── Admin/                  # 🆕 Tests del módulo Admin
+│   │   ├── Application/
+│   │   │   ├── test_commands.py
+│   │   │   ├── test_command_handlers.py
+│   │   │   ├── test_queries.py
+│   │   │   ├── test_query_handlers.py
+│   │   │   └── test_read_models.py
+│   │   ├── domain/
+│   │   │   ├── entities/
+│   │   │   │   └── test_user.py
+│   │   │   └── value_objects/
+│   │   │       └── test_user_value_objects.py
+│   │   └── events/
+│   │       └── test_user_events.py
+│   ├── Application/            # Tests de HelloWorld
 │   │   ├── test_commands.py           # Tests de Commands (CQRS)
 │   │   ├── test_command_handlers.py   # Tests de Command Handlers
 │   │   ├── test_queries.py            # Tests de Queries (CQRS)
@@ -77,6 +91,9 @@ python -m pytest tests/ -v
 ```bash
 # Todos los tests con resumen corto
 python -m pytest tests/
+
+# Tests solo del módulo Admin
+python -m pytest tests/unit/Admin/ -v
 
 # Solo mostrar el resumen (más rápido de leer)
 python -m pytest tests/ -q

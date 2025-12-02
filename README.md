@@ -5,6 +5,7 @@ Proyecto de ejemplo implementando **Arquitectura Hexagonal (Puertos y Adaptadore
 ## 📋 Tabla de Contenidos
 
 - [Arquitectura](#arquitectura)
+- [Módulos del Sistema](#módulos-del-sistema)
 - [Flujos de la Aplicación](#flujos-de-la-aplicación)
   - [Flujo de Inicialización](#1-flujo-de-inicialización-de-la-aplicación)
   - [Flujo de Escritura (Commands)](#2-flujo-de-escritura-commands---crear-helloworld)
@@ -52,7 +53,44 @@ El proyecto implementa una arquitectura en capas siguiendo los principios de Cle
 - ✅ **Event-Driven** - Domain Events con EventDispatcher
 - ✅ **Dependency Injection** - DI Container con dependency-injector
 - ✅ **Repository Pattern** - Abstracción de persistencia
-- ✅ **Use Cases** - Lógica de aplicación encapsulada
+- ✅ **Modular Architecture** - Módulos autocontenidos (Admin, HelloWorld)
+
+---
+
+## 📦 Módulos del Sistema
+
+### HelloWorld (Módulo Principal)
+- **Ubicación**: `app/Domain/HelloWorld/`, `app/Application/`, `app/Infrastructure/`
+- **Entidad**: `HelloWorld` (Aggregate Root)
+- **Value Objects**: `GreetingValueObject`
+- **Events**: `HelloWorldCreated`, `HelloWorldUpdated`, `HelloWorldDeleted`
+- **CQRS**: Completo con Commands, Queries, Handlers y Buses
+
+### Admin (Módulo Autocontenido)
+- **Ubicación**: `app/Admin/` (estructura DDD completa autocontenida)
+- **Entidad**: `User` (Aggregate Root con UUID)
+- **Value Objects**: `UsernameValueObject`, `EmailValueObject`, `UuidValueObject`
+- **Events**: `UserCreated`
+- **CQRS**: Commands y Queries con sus respectivos Handlers
+
+```
+app/Admin/
+├── Application/
+│   ├── Commands/           # CreateUserCommand
+│   ├── CommandHandlers/    # CreateUserHandler
+│   ├── Queries/            # GetUserByIdQuery
+│   ├── QueryHandlers/      # GetUserByIdHandler
+│   └── ReadModels/         # UserReadModel
+├── Domain/
+│   ├── User.py             # Aggregate Root
+│   ├── Events/             # UserCreated
+│   ├── Exceptions/         # IncorrectUsernameException, IncorrectEmailException
+│   └── ValueObjects/       # UsernameValueObject, EmailValueObject
+└── Infrastructure/
+    ├── Controller/         # AdminUserController
+    ├── Repository/         # UserWriteRepository, UserReadRepository
+    └── Persistence/        # UserModel, UserMapper
+```
 
 ---
 
@@ -522,25 +560,44 @@ app/
 │   ├── log.py                     # Configuración de logging
 │   └── signals.py                 # Handlers de señales del sistema
 │
-├── Domain/                         # 🟢 Capa de Dominio (lógica de negocio)
+├── Admin/                          # 🆕 Módulo Admin (autocontenido)
+│   ├── Application/
+│   │   ├── Commands/              # CreateUserCommand
+│   │   ├── CommandHandlers/       # CreateUserHandler
+│   │   ├── Queries/               # GetUserByIdQuery
+│   │   ├── QueryHandlers/         # GetUserByIdHandler
+│   │   └── ReadModels/            # UserReadModel
+│   ├── Domain/
+│   │   ├── User.py                # Aggregate Root (UUID)
+│   │   ├── UserWriteRepositoryInterface.py
+│   │   ├── UserReadRepositoryInterface.py
+│   │   ├── Events/                # UserCreated
+│   │   ├── Exceptions/            # IncorrectUsernameException, IncorrectEmailException
+│   │   └── ValueObjects/          # UsernameValueObject, EmailValueObject
+│   └── Infrastructure/
+│       ├── Controller/            # AdminUserController
+│       ├── Repository/            # UserWriteRepository, UserReadRepository
+│       └── Persistence/           # UserModel, UserMapper
+│
+├── Domain/                         # 🟢 Capa de Dominio (HelloWorld)
 │   └── HelloWorld/
 │       ├── HelloWorld.py          # Entidad de dominio (Aggregate Root)
-│       ├── HelloWorldRepositoryInterface.py  # Puerto (interfaz)
+│       ├── HelloWorldRepositoryInterface.py  # Puerto Write (interfaz)
+│       ├── HelloWorldReadRepositoryInterface.py  # Puerto Read (interfaz)
 │       ├── Events/
-│       │   ├── HelloWorldCreated.py         # Evento de dominio
-│       │   └── HelloWorldDeleted.py         # Evento de dominio
+│       │   ├── HelloWorldCreated.py
+│       │   ├── HelloWorldUpdated.py
+│       │   └── HelloWorldDeleted.py
 │       ├── Exceptions/
 │       │   └── IncorrectGreetingException.py
 │       └── ValueObjects/
-│           └── Greeting.py        # Value Object con validaciones
+│           └── GreetingValueObject.py
 │
-├── Application/                    # 🟡 Capa de Aplicación (casos de uso)
+├── Application/                    # 🟡 Capa de Aplicación (HelloWorld)
 │   ├── UseCases/                  # Use Cases (legacy, compatibilidad)
-│   │   └── HelloWorld/
-│   │       ├── CreateHelloWorldUseCase.py
-│   │       ├── GetAllHelloWorldUseCase.py
-│   │       ├── GetHelloWorldByIdUseCase.py
-│   │       └── DeleteHelloWorldUseCase.py
+│   │   └── Shows/
+│   │       ├── SearchShowsUseCase.py
+│   │       └── GetShowByIdUseCase.py
 │   │
 │   ├── Commands/                  # 🔵 CQRS - Commands (escritura)
 │   │   ├── CreateHelloWorldCommand.py

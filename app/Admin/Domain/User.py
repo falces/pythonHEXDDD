@@ -36,15 +36,9 @@ class User(AggregateRootBase):
             id=id,
         )
         
-    def register_event(
-        self,
-        id: int,
-    ) -> None:
-        
-        self.id = id
-        
+    def mark_as_created(self) -> None:
         event = UserCreated(
-            user_id=self.id,
+            user_id=self.id.value,
             username=self.username.value,
             email=self.email.value,
         )

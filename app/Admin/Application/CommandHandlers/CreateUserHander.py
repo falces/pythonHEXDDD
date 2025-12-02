@@ -21,9 +21,8 @@ class CreateUserHander(CommandHandler):
         self,
         command: CreateUserCommand,
     ) -> str:
-        
-        username: str = UsernameValueObject.create(command.username)
-        email: str = EmailValueObject.create(command.email)
+        username = UsernameValueObject.create(command.username)
+        email = EmailValueObject.create(command.email)
         
         user = User.create(
             username=username,
@@ -32,9 +31,9 @@ class CreateUserHander(CommandHandler):
         
         saved_user = self.write_repository.save(user)
         
-        saved_user.register_event(saved_user.id)
+        saved_user.mark_as_created()
         
         self.event_dispatcher.publish_multiple(
             saved_user.pull_domain_events())
         
-        return saved_user.id
+        return saved_user.id.value
