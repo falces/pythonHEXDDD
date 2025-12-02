@@ -1,9 +1,9 @@
 import traceback
 from flask import Blueprint, request, current_app
-from Admin.Infrastructure.Persistence.Mappers.UserMapper import UserMapper
 from Shared.Infrastructure.Controller.ControllerBase import ControllerBase
 from Admin.Application.Commands.CreateUserCommand import CreateUserCommand
 from Admin.Application.Queries.GetUserByIdQuery import GetUserByIdQuery
+from Admin.Infrastructure.Validators.RequestValidators import CreateUserValidator
 
 
 admin_user_controller = Blueprint('adminUserController', __name__)
@@ -16,12 +16,12 @@ class AdminUserController:
         try:
             data = request.get_json()
             
-            # Comprobar body
-            # if not data or 'greeting' not in data:
-            #     return ControllerBase.format_response(
-            #         {"error": "Field 'greeting' is required"},
-            #         400
-            #     )
+            validator = CreateUserValidator(data)
+            if not validator.is_valid():
+                return ControllerBase.format_response(
+                    {"errors": validator.get_errors()},
+                    400
+                )
             
             create_user_command = CreateUserCommand(
                 username=data['username'],
@@ -40,10 +40,6 @@ class AdminUserController:
                 created_user,
                 201
             )
-            
-            
-        # except IncorrectGreetingException as e:
-        #     return ControllerBase.format_response({"error": str(e)}, 400)
 
         except Exception as e:
             return ControllerBase.format_response(
