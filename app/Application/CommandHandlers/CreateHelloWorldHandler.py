@@ -5,7 +5,7 @@ Handler para procesar el comando CreateHelloWorldCommand.
 from Application.Commands.CreateHelloWorldCommand import CreateHelloWorldCommand
 from Domain.HelloWorld.HelloWorld import HelloWorld
 from Domain.HelloWorld.ValueObjects.GreetingValueObject import GreetingValueObject
-from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
+from Domain.HelloWorld.HelloWorldWriteRepositoryInterface import HelloWorldWriteRepositoryInterface
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 from Shared.Application.CommandHandler import CommandHandler
 
@@ -18,7 +18,7 @@ class CreateHelloWorldHandler(CommandHandler):
 
     def __init__(
         self,
-        write_repository: HelloWorldRepositoryInterface,
+        write_repository: HelloWorldWriteRepositoryInterface,
         event_dispatcher: EventDispatcherInterface
     ):
         self.write_repository = write_repository
