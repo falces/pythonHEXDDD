@@ -1,12 +1,12 @@
 from typing import Optional
 from Infrastructure.Persistence.database import db
 from Domain.HelloWorld.HelloWorld import HelloWorld
-from Domain.HelloWorld.HelloWorldRepositoryInterface import HelloWorldRepositoryInterface
+from Domain.HelloWorld.HelloWorldWriteRepositoryInterface import HelloWorldWriteRepositoryInterface
 from Infrastructure.Persistence.SQLAlchemy.HelloWorldModel import HelloWorldModel
 from Infrastructure.Persistence.Mappers.HelloWorldMapper import HelloWorldMapper
 
 
-class HelloWorldWriteRepository(HelloWorldRepositoryInterface):
+class HelloWorldWriteRepository(HelloWorldWriteRepositoryInterface):
     """
     Repositorio de escritura (Write Repository) para HelloWorld.
     En CQRS puro, este repositorio SOLO maneja operaciones de escritura (CUD).

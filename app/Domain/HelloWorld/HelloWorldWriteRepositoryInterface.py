@@ -3,7 +3,7 @@ from typing import List, Optional
 from Domain.HelloWorld.HelloWorld import HelloWorld
 
 
-class HelloWorldRepositoryInterface(ABC):
+class HelloWorldWriteRepositoryInterface(ABC):
     """
     Interface del repositorio de HelloWorld.
     Define el contrato que debe implementar cualquier repositorio de HelloWorld.
