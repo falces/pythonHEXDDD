@@ -1,5 +1,5 @@
 from Shared.Application.CommandHandler import CommandHandler
-from Admin.Domain.UserWriteRepositoryInterface import UserWriteRepositoryInterface
+from Admin.Domain.Repository.UserWriteRepositoryInterface import UserWriteRepositoryInterface
 from Shared.Domain.Events.EventDispatcherInterface import EventDispatcherInterface
 from Admin.Application.Commands.CreateUserCommand import CreateUserCommand
 from Admin.Domain.User import User

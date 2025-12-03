@@ -1,6 +1,6 @@
 from Shared.Infrastructure.Persistence.database import db
 from Shared.Infrastructure.Repository.BaseWriteRepository import BaseWriteRepository
-from Admin.Domain.UserWriteRepositoryInterface import UserWriteRepositoryInterface
+from Admin.Domain.Repository.UserWriteRepositoryInterface import UserWriteRepositoryInterface
 from Admin.Domain.User import User
 from Admin.Infrastructure.Persistence.Mappers.UserMapper import UserMapper
 

@@ -1,6 +1,6 @@
 from typing import Optional
 from Shared.Application.QueryHandler import QueryHandler
-from Admin.Domain.UserReadRepositoryInterface import UserReadRepositoryInterface
+from Admin.Domain.Repository.UserReadRepositoryInterface import UserReadRepositoryInterface
 from Admin.Application.Queries.GetUserByIdQuery import GetUserByIdQuery
 from Admin.Application.ReadModels.UserReadModel import UserReadModel
 

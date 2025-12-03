@@ -2,7 +2,7 @@ from typing import Optional, Union
 from sqlalchemy import select
 from Admin.Application.ReadModels.UserReadModel import UserReadModel
 from Shared.Infrastructure.Persistence.database import db
-from Admin.Domain.UserReadRepositoryInterface import UserReadRepositoryInterface
+from Admin.Domain.Repository.UserReadRepositoryInterface import UserReadRepositoryInterface
 from Admin.Infrastructure.Persistence.SQLAlchemy.UserModel import UserModel
 from Shared.Domain.ValueObjects.UuidValueObject import UuidValueObject
 
