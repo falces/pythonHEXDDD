@@ -39,6 +39,14 @@ tags:
     description: Operaciones CRUD para entidades HelloWorld
   - name: Shows
     description: Búsqueda y consulta de shows/películas/series
+  - name: Admin
+    description: |
+      Módulo Admin con arquitectura Hexagonal/DDD/CQRS.
+      CRUD completo de usuarios con direcciones como entidades hijas.
+  - name: Admin2
+    description: |
+      Módulo Admin2 con arquitectura simple (sin DDD/CQRS).
+      CRUD de usuarios en ~150 líneas de código.
 
 paths:
   /api/v1/hello-world/:
@@ -386,6 +394,680 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  # ========== ADMIN MODULE (Hexagonal/DDD/CQRS) ==========
+
+  /api/v1/admin/users/:
+    get:
+      tags:
+        - Admin
+      summary: Obtener todos los usuarios
+      description: Retorna una lista de todos los usuarios registrados con sus direcciones
+      operationId: getAllUsers
+      responses:
+        "200":
+          description: Lista de usuarios obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+              example:
+                - id: "550e8400-e29b-41d4-a716-446655440000"
+                  username: "john_doe"
+                  email: "john@example.com"
+                  addresses:
+                    - id: "660e8400-e29b-41d4-a716-446655440001"
+                      street: "123 Main St"
+                      city: "New York"
+                      country: "USA"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Admin
+      summary: Crear nuevo usuario (CQRS)
+      description: |
+        Crea un nuevo usuario con arquitectura CQRS.
+
+        **Patrón CQRS implementado:**
+        - Crea un `CreateUserCommand`
+        - Lo despacha a través del `Command Bus`
+        - El `CreateUserHandler` procesa el comando
+        - Publica evento `UserCreated`
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+            example:
+              username: "john_doe"
+              email: "john@example.com"
+      responses:
+        "201":
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                username: "john_doe"
+                email: "john@example.com"
+                addresses: []
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+              example:
+                errors:
+                  - field: "username"
+                    message: "Username must be between 3 and 50 characters"
+                    code: "min_length"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/admin/users/{user_id}:
+    get:
+      tags:
+        - Admin
+      summary: Obtener usuario por ID
+      description: Retorna un usuario específico identificado por su UUID
+      operationId: getUserById
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: UUID único del usuario
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "User not found"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Admin
+      summary: Actualizar usuario
+      description: |
+        Actualiza un usuario existente usando CQRS.
+
+        **Patrón CQRS implementado:**
+        - Crea un `UpdateUserCommand`
+        - Lo despacha a través del `Command Bus`
+        - El `UpdateUserHandler` procesa el comando
+      operationId: updateUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: UUID del usuario a actualizar
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+            example:
+              username: "john_updated"
+              email: "john.updated@example.com"
+      responses:
+        "200":
+          description: Usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      tags:
+        - Admin
+      summary: Actualizar usuario parcialmente
+      description: Actualiza parcialmente un usuario (misma funcionalidad que PUT)
+      operationId: patchUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: Usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Admin
+      summary: Eliminar usuario
+      description: Elimina un usuario del sistema por su UUID
+      operationId: deleteUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          description: UUID del usuario a eliminar
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "204":
+          description: Usuario eliminado exitosamente
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ========== USER ADDRESSES (Child Entity) ==========
+
+  /api/v1/admin/users/{user_id}/addresses:
+    get:
+      tags:
+        - Admin
+      summary: Obtener direcciones de un usuario
+      description: Retorna todas las direcciones asociadas a un usuario
+      operationId: getUserAddresses
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      responses:
+        "200":
+          description: Lista de direcciones
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserAddress"
+              example:
+                - id: "660e8400-e29b-41d4-a716-446655440001"
+                  street: "123 Main St"
+                  city: "New York"
+                  country: "USA"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Admin
+      summary: Añadir dirección a usuario
+      description: |
+        Añade una nueva dirección al usuario.
+
+        **Domain Event:** Publica `UserAddressAdded`
+      operationId: addUserAddress
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAddressRequest"
+            example:
+              street: "123 Main St"
+              city: "New York"
+              country: "USA"
+      responses:
+        "201":
+          description: Dirección añadida exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/admin/users/{user_id}/addresses/{address_id}:
+    get:
+      tags:
+        - Admin
+      summary: Obtener dirección específica
+      description: Retorna una dirección específica de un usuario
+      operationId: getUserAddress
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        - name: address_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: "660e8400-e29b-41d4-a716-446655440001"
+      responses:
+        "200":
+          description: Dirección encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "404":
+          description: Usuario o dirección no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    put:
+      tags:
+        - Admin
+      summary: Actualizar dirección
+      description: Actualiza una dirección existente del usuario
+      operationId: updateUserAddress
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: address_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAddressRequest"
+            example:
+              street: "456 Updated St"
+              city: "Los Angeles"
+      responses:
+        "200":
+          description: Dirección actualizada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+        "404":
+          description: Usuario o dirección no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    patch:
+      tags:
+        - Admin
+      summary: Actualizar dirección parcialmente
+      description: Actualiza parcialmente una dirección (al menos un campo requerido)
+      operationId: patchUserAddress
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: address_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAddressRequest"
+      responses:
+        "200":
+          description: Dirección actualizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserAddress"
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationErrors"
+        "404":
+          description: Usuario o dirección no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Admin
+      summary: Eliminar dirección
+      description: |
+        Elimina una dirección del usuario.
+
+        **Domain Event:** Publica `UserAddressRemoved`
+      operationId: deleteUserAddress
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: address_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Dirección eliminada exitosamente
+        "404":
+          description: Usuario o dirección no encontrada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ========== ADMIN2 MODULE (Simple Architecture) ==========
+
+  /api/v1/admin2/users:
+    get:
+      tags:
+        - Admin2
+      summary: Obtener todos los usuarios (Simple)
+      description: |
+        Retorna todos los usuarios usando arquitectura simple sin DDD/CQRS.
+
+        **Arquitectura:** MVC tradicional con Service Layer
+      operationId: admin2GetAllUsers
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Admin2User"
+              example:
+                - id: 1
+                  username: "admin"
+                  email: "admin@example.com"
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - Admin2
+      summary: Crear usuario (Simple)
+      description: Crea un nuevo usuario usando arquitectura simple
+      operationId: admin2CreateUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+              properties:
+                username:
+                  type: string
+                  example: "new_user"
+                email:
+                  type: string
+                  format: email
+                  example: "user@example.com"
+      responses:
+        "201":
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin2User"
+        "400":
+          description: Datos de entrada inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "username is required"
+        "409":
+          description: Conflicto (usuario ya existe)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/v1/admin2/users/{user_id}:
+    get:
+      tags:
+        - Admin2
+      summary: Obtener usuario por ID (Simple)
+      description: Retorna un usuario específico por su ID
+      operationId: admin2GetUserById
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "1"
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin2User"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "User not found"
+
+    put:
+      tags:
+        - Admin2
+      summary: Actualizar usuario (Simple)
+      description: Actualiza un usuario existente
+      operationId: admin2UpdateUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "1"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "updated_user"
+                email:
+                  type: string
+                  format: email
+                  example: "updated@example.com"
+      responses:
+        "200":
+          description: Usuario actualizado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Admin2User"
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Conflicto (email ya existe)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    delete:
+      tags:
+        - Admin2
+      summary: Eliminar usuario (Simple)
+      description: Elimina un usuario del sistema
+      operationId: admin2DeleteUser
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: "1"
+      responses:
+        "204":
+          description: Usuario eliminado exitosamente
+        "404":
+          description: Usuario no encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
 components:
   schemas:
     HelloWorld:
@@ -479,3 +1161,211 @@ components:
           example: "Resource not found"
       example:
         error: "Resource not found"
+
+    # ========== ADMIN MODULE SCHEMAS ==========
+
+    User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID único del usuario
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Nombre de usuario
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          description: Email del usuario
+          example: "john@example.com"
+        addresses:
+          type: array
+          description: Direcciones del usuario
+          items:
+            $ref: "#/components/schemas/UserAddress"
+      example:
+        id: "550e8400-e29b-41d4-a716-446655440000"
+        username: "john_doe"
+        email: "john@example.com"
+        addresses: []
+
+    UserAddress:
+      type: object
+      required:
+        - id
+        - street
+        - city
+        - country
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: UUID único de la dirección
+          example: "660e8400-e29b-41d4-a716-446655440001"
+        street:
+          type: string
+          maxLength: 255
+          description: Calle y número
+          example: "123 Main St"
+        city:
+          type: string
+          maxLength: 100
+          description: Ciudad
+          example: "New York"
+        country:
+          type: string
+          maxLength: 100
+          description: País
+          example: "USA"
+      example:
+        id: "660e8400-e29b-41d4-a716-446655440001"
+        street: "123 Main St"
+        city: "New York"
+        country: "USA"
+
+    CreateUserRequest:
+      type: object
+      required:
+        - username
+        - email
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Nombre de usuario (3-50 caracteres)
+          example: "john_doe"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Email válido
+          example: "john@example.com"
+
+    UpdateUserRequest:
+      type: object
+      description: Al menos un campo debe estar presente
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          description: Nuevo nombre de usuario
+          example: "john_updated"
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          description: Nuevo email
+          example: "john.updated@example.com"
+
+    CreateAddressRequest:
+      type: object
+      required:
+        - street
+        - city
+        - country
+      properties:
+        street:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Calle y número
+          example: "123 Main St"
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Ciudad
+          example: "New York"
+        country:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: País
+          example: "USA"
+
+    UpdateAddressRequest:
+      type: object
+      description: Al menos un campo debe estar presente
+      properties:
+        street:
+          type: string
+          minLength: 1
+          maxLength: 255
+          description: Nueva calle
+          example: "456 Updated St"
+        city:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Nueva ciudad
+          example: "Los Angeles"
+        country:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Nuevo país
+          example: "USA"
+
+    ValidationErrors:
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Campo con error
+                example: "username"
+              message:
+                type: string
+                description: Mensaje de error
+                example: "Username must be between 3 and 50 characters"
+              code:
+                type: string
+                description: Código de error
+                example: "min_length"
+      example:
+        errors:
+          - field: "username"
+            message: "Field 'username' is required"
+            code: "required"
+
+    # ========== ADMIN2 MODULE SCHEMAS ==========
+
+    Admin2User:
+      type: object
+      required:
+        - id
+        - username
+        - email
+      properties:
+        id:
+          type: integer
+          description: ID numérico auto-incrementado
+          example: 1
+        username:
+          type: string
+          description: Nombre de usuario
+          example: "admin"
+        email:
+          type: string
+          format: email
+          description: Email del usuario
+          example: "admin@example.com"
+      example:
+        id: 1
+        username: "admin"
+        email: "admin@example.com"

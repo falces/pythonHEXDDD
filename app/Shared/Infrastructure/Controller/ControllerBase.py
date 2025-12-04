@@ -6,6 +6,5 @@ class ControllerBase():
         code: int,
     ) -> list:
         return {
-            "status": "ok",
             "data": data,
         }, code

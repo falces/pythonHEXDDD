@@ -1,15 +1,15 @@
 # 📐 Resumen de Arquitectura - Python HEX DDD CQRS
 
-## ✅ Estado de Validación (Actualizado: 02 Dic 2025)
+## ✅ Estado de Validación (Actualizado: 04 Dic 2025)
 
 | Patrón | Estado | Notas |
 |--------|--------|-------|
 | **Arquitectura Hexagonal** | ✅ Completo | Capas bien separadas |
-| **DDD** | ✅ Completo | Aggregate Roots, Value Objects, Domain Events |
+| **DDD** | ✅ Completo | Aggregate Roots, Value Objects, Domain Events, Entities |
 | **CQRS** | ✅ Completo | CommandBus + QueryBus con interfaces |
-| **Arquitectura Modular** | ✅ Nuevo | Módulos independientes (HelloWorld, Admin) |
+| **Arquitectura Modular** | ✅ Completo | Módulos independientes (HelloWorld, Admin, Admin2) |
 | **Dependency Inversion** | ✅ Completo | Todas las dependencias usan interfaces |
-| **Tests** | ✅ 198/198 pasando | 85%+ cobertura |
+| **Tests** | ✅ 281+ pasando | 90%+ cobertura |
 
 ---
 
@@ -21,12 +21,23 @@
 - CQRS: Commands, Queries, Handlers completos
 - Events: `HelloWorldCreated`, `HelloWorldUpdated`, `HelloWorldDeleted`
 
-### Módulo Admin (Nuevo)
+### Módulo Admin (Hexagonal/DDD/CQRS)
 - Ubicación: `app/Admin/` (estructura autocontenida)
-- Entidad: `User` (Aggregate Root)
-- CQRS: Commands, Queries, Handlers
-- Events: `UserCreated`
+- Entidad: `User` (Aggregate Root) con `UserAddress` (Entidad hija)
+- CQRS Completo:
+  - Commands User: `CreateUserCommand`, `UpdateUserCommand`, `DeleteUserCommand`
+  - Commands Address: `AddUserAddressCommand`, `UpdateUserAddressCommand`, `RemoveUserAddressCommand`
+  - Queries: `GetUserByIdQuery`, `GetAllUsersQuery`
+- Events: `UserCreated`, `UserAddressAdded`, `UserAddressRemoved`
 - Value Objects: `UsernameValueObject`, `EmailValueObject`, `UuidValueObject`
+- Validators: `CreateUserValidator`, `UpdateUserValidator`, `AddUserAddressValidator`, `UpdateUserAddressValidator`
+- Base Repository: `BaseWriteRepository` (manejo centralizado de errores)
+
+### Módulo Admin2 (Arquitectura Simple)
+- Ubicación: `app/Admin2/` (3 archivos)
+- Arquitectura tradicional sin DDD/CQRS/Hexagonal
+- Estructura: `models.py`, `services.py`, `controller.py`
+- CRUD completo en ~150 líneas de código
 
 ---
 
@@ -183,24 +194,35 @@ class HelloWorldReadRepositoryInterface(ABC):
 
 ```
 app/
-├── Admin/                          # 🆕 Módulo Admin (autocontenido)
+├── Admin/                          # 🆕 Módulo Admin (Hexagonal/DDD/CQRS)
 │   ├── Application/
 │   │   ├── Commands/
-│   │   │   └── CreateUserCommand.py
+│   │   │   ├── CreateUserCommand.py
+│   │   │   ├── UpdateUserCommand.py
+│   │   │   └── DeleteUserCommand.py
 │   │   ├── CommandHandlers/
-│   │   │   └── CreateUserHandler.py
+│   │   │   ├── CreateUserHandler.py
+│   │   │   ├── UpdateUserHandler.py
+│   │   │   └── DeleteUserHandler.py
 │   │   ├── Queries/
-│   │   │   └── GetUserByIdQuery.py
+│   │   │   ├── GetUserByIdQuery.py
+│   │   │   └── GetAllUsersQuery.py
 │   │   ├── QueryHandlers/
-│   │   │   └── GetUserByIdHandler.py
+│   │   │   ├── GetUserByIdHandler.py
+│   │   │   └── GetAllUsersHandler.py
 │   │   └── ReadModels/
 │   │       └── UserReadModel.py
 │   ├── Domain/
 │   │   ├── User.py                 # Aggregate Root
-│   │   ├── UserWriteRepositoryInterface.py
-│   │   ├── UserReadRepositoryInterface.py
+│   │   ├── Entities/
+│   │   │   └── UserAddress.py      # Entidad hija del agregado
+│   │   ├── Repository/
+│   │   │   ├── UserWriteRepositoryInterface.py
+│   │   │   └── UserReadRepositoryInterface.py
 │   │   ├── Events/
-│   │   │   └── UserCreated.py
+│   │   │   ├── UserCreated.py
+│   │   │   ├── UserAddressAdded.py
+│   │   │   └── UserAddressRemoved.py
 │   │   ├── Exceptions/
 │   │   │   ├── IncorrectUsernameException.py
 │   │   │   └── IncorrectEmailException.py
@@ -209,15 +231,24 @@ app/
 │   │       └── EmailValueObject.py
 │   └── Infrastructure/
 │       ├── Controller/
-│       │   └── AdminUserController.py
+│       │   └── AdminUserController.py  # CRUD completo
 │       ├── Repository/
 │       │   ├── UserWriteRepository.py
 │       │   └── UserReadRepository.py
+│       ├── Validators/
+│       │   └── RequestValidators.py    # CreateUserValidator, UpdateUserValidator
 │       └── Persistence/
 │           ├── SQLAlchemy/
-│           │   └── UserModel.py
+│           │   ├── UserModel.py
+│           │   └── UserAddressModel.py
 │           └── Mappers/
-│               └── UserMapper.py
+│               ├── UserMapper.py
+│               └── UserAddressMapper.py
+│
+├── Admin2/                         # 🆕 Módulo Admin2 (Arquitectura Simple)
+│   ├── models.py                   # Modelo SQLAlchemy
+│   ├── services.py                 # Lógica de negocio
+│   └── controller.py               # Endpoints REST
 │
 ├── Application/                    # Capa de Aplicación (HelloWorld)
 │   ├── Commands/                   # Comandos inmutables (dataclass frozen)
@@ -292,11 +323,20 @@ app/
 │   │   ├── Events/
 │   │   │   ├── DomainEvent.py
 │   │   │   └── EventDispatcherInterface.py
+│   │   ├── Exceptions/
+│   │   │   └── ExceptionBase.py
 │   │   └── ValueObjects/
-│   │       └── StringValueObject.py
+│   │       ├── StringValueObject.py
+│   │       └── UuidValueObject.py
 │   └── Infrastructure/
-│       └── Events/
-│           └── EventDispatcher.py
+│       ├── Events/
+│       │   └── EventDispatcher.py
+│       ├── Exceptions/
+│       │   └── DatabaseException.py
+│       ├── Repository/
+│       │   └── BaseWriteRepository.py  # 🆕 Manejo centralizado de errores BD
+│       └── Validators/
+│           └── RequestValidator.py     # 🆕 Clase base para validadores
 │
 └── config/
     └── container.py                # DI Container (dependency-injector)
@@ -334,7 +374,7 @@ pytest tests/unit/Application/test_query_handlers.py -v
 pytest tests/unit/Admin/Application/test_command_handlers.py -v
 ```
 
-**Resultado actual:** 198 tests pasando, 85%+ cobertura
+**Resultado actual:** 281+ tests pasando, 90%+ cobertura
 
 ---
 
@@ -425,4 +465,4 @@ query_bus.register(GetEntityByIdQuery, container.get_entity_by_id_handler())
 
 ---
 
-**Última actualización: 02 de diciembre de 2025**
+**Última actualización: 04 de diciembre de 2025**

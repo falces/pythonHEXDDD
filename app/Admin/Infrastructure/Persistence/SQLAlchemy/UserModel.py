@@ -1,11 +1,12 @@
 from Shared.Infrastructure.Persistence.database import db
 from sqlalchemy import Column, String
 
+
 class UserModel(db.Model):
     
     __tablename__ = 'users'
     
-    id = Column(String(36), unique=True, nullable=False, primary_key=True)
+    id = Column(String(36), primary_key=True, nullable=False)
     username = Column(String(250), unique=True, nullable=False)
     email = Column(String(250), unique=True, nullable=False)
     

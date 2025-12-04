@@ -66,30 +66,47 @@ El proyecto implementa una arquitectura en capas siguiendo los principios de Cle
 - **Events**: `HelloWorldCreated`, `HelloWorldUpdated`, `HelloWorldDeleted`
 - **CQRS**: Completo con Commands, Queries, Handlers y Buses
 
-### Admin (Módulo Autocontenido)
+### Admin (Módulo Autocontenido - Hexagonal/DDD/CQRS)
 - **Ubicación**: `app/Admin/` (estructura DDD completa autocontenida)
-- **Entidad**: `User` (Aggregate Root con UUID)
+- **Entidad**: `User` (Aggregate Root con UUID) + `UserAddress` (Entidad hija)
 - **Value Objects**: `UsernameValueObject`, `EmailValueObject`, `UuidValueObject`
-- **Events**: `UserCreated`
-- **CQRS**: Commands y Queries con sus respectivos Handlers
+- **Events**: `UserCreated`, `UserAddressAdded`, `UserAddressRemoved`
+- **CQRS Completo**: Commands y Queries con sus respectivos Handlers
+- **Validators**: `CreateUserValidator`, `UpdateUserValidator`
+- **Endpoints**: CRUD completo (`GET`, `POST`, `PUT/PATCH`, `DELETE`)
 
 ```
 app/Admin/
 ├── Application/
-│   ├── Commands/           # CreateUserCommand
-│   ├── CommandHandlers/    # CreateUserHandler
-│   ├── Queries/            # GetUserByIdQuery
-│   ├── QueryHandlers/      # GetUserByIdHandler
+│   ├── Commands/           # User: Create, Update, Delete | Address: Add, Update, Remove
+│   ├── CommandHandlers/    # User: Create, Update, Delete | Address: Add, Update, Remove
+│   ├── Queries/            # GetUserByIdQuery, GetAllUsersQuery
+│   ├── QueryHandlers/      # GetUserByIdHandler, GetAllUsersHandler
 │   └── ReadModels/         # UserReadModel
 ├── Domain/
 │   ├── User.py             # Aggregate Root
-│   ├── Events/             # UserCreated
+│   ├── Entities/           # UserAddress (entidad hija)
+│   ├── Events/             # UserCreated, UserAddressAdded, UserAddressRemoved
 │   ├── Exceptions/         # IncorrectUsernameException, IncorrectEmailException
+│   ├── Repository/         # Interfaces (Write/Read)
 │   └── ValueObjects/       # UsernameValueObject, EmailValueObject
 └── Infrastructure/
-    ├── Controller/         # AdminUserController
+    ├── Controller/         # AdminUserController (CRUD User + CRUD Address)
     ├── Repository/         # UserWriteRepository, UserReadRepository
-    └── Persistence/        # UserModel, UserMapper
+    ├── Validators/         # User: Create, Update | Address: Add, Update
+    └── Persistence/        # UserModel, UserAddressModel, Mappers
+```
+
+### Admin2 (Módulo Simple - Sin DDD/CQRS/Hexagonal)
+- **Ubicación**: `app/Admin2/` (solo 3 archivos)
+- **Arquitectura**: Tradicional MVC simplificado
+- **Endpoints**: CRUD completo en ~150 líneas
+
+```
+app/Admin2/
+├── models.py      # Modelo SQLAlchemy con to_dict()
+├── services.py    # Lógica de negocio (UserService)
+└── controller.py  # Blueprint Flask con endpoints REST
 ```
 
 ---

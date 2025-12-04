@@ -7,7 +7,11 @@ from Shared.Infrastructure.Validators.RequestValidator import (
     RequestValidator,
     ValidationError
 )
-from Admin.Infrastructure.Validators.RequestValidators import CreateUserValidator
+from Admin.Infrastructure.Validators.RequestValidators import (
+    CreateUserValidator,
+    AddUserAddressValidator,
+    UpdateUserAddressValidator,
+)
 
 
 class TestRequestValidator:
@@ -231,3 +235,146 @@ class TestCreateUserValidator:
         
         assert result1 == result2
         assert len(validator.errors) == 0  # No se duplican errores
+
+
+class TestAddUserAddressValidator:
+    """Tests para AddUserAddressValidator."""
+
+    def test_valid_data_passes(self):
+        """Debería pasar con datos válidos."""
+        data = {
+            "street": "123 Main St",
+            "city": "New York",
+            "country": "USA"
+        }
+        validator = AddUserAddressValidator(data)
+        
+        assert validator.is_valid() is True
+        assert len(validator.errors) == 0
+
+    def test_missing_street_fails(self):
+        """Debería fallar sin street."""
+        data = {
+            "city": "New York",
+            "country": "USA"
+        }
+        validator = AddUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        fields_with_errors = [e.field for e in validator.errors]
+        assert "street" in fields_with_errors
+
+    def test_missing_city_fails(self):
+        """Debería fallar sin city."""
+        data = {
+            "street": "123 Main St",
+            "country": "USA"
+        }
+        validator = AddUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        fields_with_errors = [e.field for e in validator.errors]
+        assert "city" in fields_with_errors
+
+    def test_missing_country_fails(self):
+        """Debería fallar sin country."""
+        data = {
+            "street": "123 Main St",
+            "city": "New York"
+        }
+        validator = AddUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        fields_with_errors = [e.field for e in validator.errors]
+        assert "country" in fields_with_errors
+
+    def test_empty_data_fails(self):
+        """Debería fallar con data vacía."""
+        validator = AddUserAddressValidator({})
+        
+        assert validator.is_valid() is False
+        assert len(validator.errors) >= 3  # street, city, country
+
+    def test_street_too_long_fails(self):
+        """Debería fallar con street demasiado larga."""
+        data = {
+            "street": "a" * 256,
+            "city": "New York",
+            "country": "USA"
+        }
+        validator = AddUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        error_codes = [e.code for e in validator.errors]
+        assert "max_length" in error_codes
+
+
+class TestUpdateUserAddressValidator:
+    """Tests para UpdateUserAddressValidator."""
+
+    def test_valid_data_with_all_fields(self):
+        """Debería pasar con todos los campos."""
+        data = {
+            "street": "456 Updated St",
+            "city": "Los Angeles",
+            "country": "USA"
+        }
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is True
+
+    def test_valid_data_with_only_street(self):
+        """Debería pasar con solo street."""
+        data = {"street": "456 Updated St"}
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is True
+
+    def test_valid_data_with_only_city(self):
+        """Debería pasar con solo city."""
+        data = {"city": "Los Angeles"}
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is True
+
+    def test_valid_data_with_only_country(self):
+        """Debería pasar con solo country."""
+        data = {"country": "Canada"}
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is True
+
+    def test_empty_data_fails(self):
+        """Debería fallar sin ningún campo."""
+        validator = UpdateUserAddressValidator({})
+        
+        assert validator.is_valid() is False
+        fields_with_errors = [e.field for e in validator.errors]
+        assert "request" in fields_with_errors
+
+    def test_street_too_long_fails(self):
+        """Debería fallar con street demasiado larga."""
+        data = {"street": "a" * 256}
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        error_codes = [e.code for e in validator.errors]
+        assert "max_length" in error_codes
+
+    def test_city_too_long_fails(self):
+        """Debería fallar con city demasiado larga."""
+        data = {"city": "a" * 101}
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        error_codes = [e.code for e in validator.errors]
+        assert "max_length" in error_codes
+
+    def test_country_too_long_fails(self):
+        """Debería fallar con country demasiado largo."""
+        data = {"country": "a" * 101}
+        validator = UpdateUserAddressValidator(data)
+        
+        assert validator.is_valid() is False
+        error_codes = [e.code for e in validator.errors]
+        assert "max_length" in error_codes
