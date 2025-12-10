@@ -23,23 +23,13 @@ class UpdateUserHandler(CommandHandler):
     def handle(self, command: UpdateUserCommand) -> str:
         # Buscar usuario existente
         existing_user = self.write_repository.find_by_id(command.id)
-        
         if existing_user is None:
             raise ValueError(f"User with id {command.id} not found")
-        
         # Actualizar campos si se proporcionan
         if command.username:
             existing_user.username = UsernameValueObject.create(command.username)
-        
         if command.email:
             existing_user.email = EmailValueObject.create(command.email)
-        
-        # Persistir cambios
-        saved_user = self.write_repository.save(existing_user)
-        
-        # Publicar eventos si los hay
-        events = saved_user.pull_domain_events()
-        if events:
-            self.event_dispatcher.publish_multiple(events)
-        
-        return saved_user.id.value
+        # Persistir cambios (transacción y eventos centralizados en el repositorio)
+        self.write_repository.save(existing_user)
+        return existing_user.id.value

@@ -57,7 +57,8 @@ class BaseWriteRepository(Generic[T]):
         context_str = ", ".join(f"{k}={v}" for k, v in context.items())
         
         try:
-            return operation()
+            with db.session.begin():
+                return operation()
         
         except IntegrityError as e:
             db.session.rollback()

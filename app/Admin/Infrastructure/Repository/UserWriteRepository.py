@@ -29,37 +29,30 @@ class UserWriteRepository(BaseWriteRepository[User], UserWriteRepositoryInterfac
             DatabaseException: Si ocurre un error de base de datos
         """
         def save_operation():
-            # Guardar usuario
+            # Guardar usuario y direcciones (transacción gestionada por BaseWriteRepository)
             model = UserMapper.toModel(user)
             merged_model = db.session.merge(model)
-            
             # Obtener direcciones actuales en BD
             existing_addresses = db.session.query(UserAddressModel).filter_by(
                 user_id=user.id.value
             ).all()
             existing_ids = {addr.id for addr in existing_addresses}
-            
             # IDs de direcciones en el dominio
             domain_ids = {addr.id.value for addr in user.addresses}
-            
             # Eliminar direcciones que ya no existen en el dominio
             for addr in existing_addresses:
                 if addr.id not in domain_ids:
                     db.session.delete(addr)
-            
             # Añadir o actualizar direcciones del dominio
             for address in user.addresses:
                 address_model = UserAddressMapper.toModel(address, user.id.value)
                 db.session.merge(address_model)
-            
-            db.session.commit()
+            db.session.flush()
             db.session.refresh(merged_model)
-            
             # Recargar direcciones
             address_models = db.session.query(UserAddressModel).filter_by(
                 user_id=user.id.value
             ).all()
-            
             return UserMapper.toDomain(merged_model, address_models)
         
         context = {
@@ -115,13 +108,12 @@ class UserWriteRepository(BaseWriteRepository[User], UserWriteRepositoryInterfac
             DatabaseException: Si ocurre un error de base de datos
         """
         def delete_operation():
-            # Eliminar direcciones primero (o dejar que CASCADE lo haga)
+            # Eliminar usuario y direcciones (transacción gestionada por BaseWriteRepository)
             db.session.query(UserAddressModel).filter_by(user_id=id).delete()
-            
             model = db.session.get(UserModel, id)
             if model:
                 db.session.delete(model)
-                db.session.commit()
+                db.session.flush()
                 return True
             return False
         

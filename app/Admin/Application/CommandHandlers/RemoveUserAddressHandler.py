@@ -42,12 +42,6 @@ class RemoveUserAddressHandler(CommandHandler):
         if not removed:
             raise ValueError(f"Address with id {command.address_id} not found")
         
-        # Persistir cambios
-        saved_user = self.write_repository.save(user)
-        
-        # Publicar eventos
-        events = saved_user.pull_domain_events()
-        if events:
-            self.event_dispatcher.publish_multiple(events)
-        
+        # Persistir cambios (transacción y eventos centralizados en el repositorio)
+        self.write_repository.save(user)
         return True

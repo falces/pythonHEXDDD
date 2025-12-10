@@ -17,36 +17,18 @@ class AddUserAddressHandler(CommandHandler):
         
     def handle(self, command: AddUserAddressCommand) -> str:
         """
-        Añade una nueva dirección al usuario.
-        
-        Args:
-            command: Comando con los datos de la dirección
-            
-        Returns:
-            str: ID de la dirección creada
-            
-        Raises:
-            ValueError: Si el usuario no existe
+        Añade una nueva dirección al usuario (Deferred Pattern: sin commit ni publicación de eventos aquí).
         """
         # Buscar usuario existente
         user = self.write_repository.find_by_id(command.user_id)
-        
         if user is None:
             raise ValueError(f"User with id {command.user_id} not found")
-        
-        # Añadir dirección al agregado (esto registra el evento internamente)
+        # Modificar el agregado (esto registra el evento internamente)
         address = user.add_address(
             street=command.street,
             city=command.city,
             country=command.country,
         )
-        
-        # Persistir cambios
-        saved_user = self.write_repository.save(user)
-        
-        # Publicar eventos
-        events = saved_user.pull_domain_events()
-        if events:
-            self.event_dispatcher.publish_multiple(events)
-        
+        # Persistir cambios (transacción y eventos centralizados en el repositorio)
+        self.write_repository.save(user)
         return address.id.value

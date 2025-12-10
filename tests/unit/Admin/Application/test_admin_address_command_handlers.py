@@ -78,21 +78,8 @@ class TestAddUserAddressHandler:
         
         assert "not found" in str(exc_info.value)
     
-    def test_add_address_publishes_events(self, handler, mock_write_repository, mock_event_dispatcher, sample_user):
-        """Debería publicar eventos de dominio."""
-        mock_write_repository.find_by_id.return_value = sample_user
-        mock_write_repository.save.return_value = sample_user
-        
-        command = AddUserAddressCommand(
-            user_id="550e8400-e29b-41d4-a716-446655440000",
-            street="123 Main St",
-            city="New York",
-            country="USA"
-        )
-        
-        handler.handle(command)
-        
-        mock_event_dispatcher.publish_multiple.assert_called_once()
+    # Ya no se publica eventos en el handler (Deferred Pattern)
+    # El test se elimina o se reemplaza por un test de save
 
 
 class TestUpdateUserAddressHandler:
@@ -209,22 +196,18 @@ class TestRemoveUserAddressHandler:
         user.pull_domain_events()  # Limpiar eventos
         return user, address
     
-    def test_remove_address_successfully(self, handler, mock_write_repository, mock_event_dispatcher, sample_user_with_address):
+    def test_remove_address_successfully(self, handler, mock_write_repository, sample_user_with_address):
         """Debería eliminar dirección exitosamente."""
         user, address = sample_user_with_address
         mock_write_repository.find_by_id.return_value = user
         mock_write_repository.save.return_value = user
-        
         command = RemoveUserAddressCommand(
             user_id="550e8400-e29b-41d4-a716-446655440000",
             address_id=address.id.value
         )
-        
         result = handler.handle(command)
-        
         assert result is True
         mock_write_repository.save.assert_called_once()
-        mock_event_dispatcher.publish_multiple.assert_called_once()
     
     def test_remove_address_user_not_found(self, handler, mock_write_repository):
         """Debería lanzar error si el usuario no existe."""

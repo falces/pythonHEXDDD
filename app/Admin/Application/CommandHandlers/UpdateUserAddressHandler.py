@@ -49,12 +49,6 @@ class UpdateUserAddressHandler(CommandHandler):
             country=command.country,
         )
         
-        # Persistir cambios
-        saved_user = self.write_repository.save(user)
-        
-        # Publicar eventos si los hay
-        events = saved_user.pull_domain_events()
-        if events:
-            self.event_dispatcher.publish_multiple(events)
-        
+        # Persistir cambios (transacción y eventos centralizados en el repositorio)
+        self.write_repository.save(user)
         return address.id.value
