@@ -9,6 +9,7 @@ from Infrastructure.Repository.HelloWorldWriteRepository import HelloWorldWriteR
 from Infrastructure.Repository.HelloWorldReadRepository import HelloWorldReadRepository
 from Infrastructure.Repository.ShowsAPIRepository import ShowsAPIRepository
 from Application.MoviesService import MoviesService
+from Admin.Infrastructure.Repository.UserWriteRepository import UserWriteRepository
 
 # CQRS - Command Bus y Query Bus
 from Shared.Application.CommandBus import CommandBus
@@ -21,6 +22,12 @@ from Application.Commands.DeleteHelloWorldCommand import DeleteHelloWorldCommand
 from Application.CommandHandlers.CreateHelloWorldHandler import CreateHelloWorldHandler
 from Application.CommandHandlers.UpdateHelloWorldHandler import UpdateHelloWorldHandler
 from Application.CommandHandlers.DeleteHelloWorldHandler import DeleteHelloWorldHandler
+from Admin.Application.Commands.CreateUserCommand import CreateUserCommand
+from Admin.Application.Commands.UpdateUserCommand import UpdateUserCommand
+from Admin.Application.Commands.DeleteUserCommand import DeleteUserCommand
+from Admin.Application.Commands.AddUserAddressCommand import AddUserAddressCommand
+from Admin.Application.Commands.UpdateUserAddressCommand import UpdateUserAddressCommand
+from Admin.Application.Commands.RemoveUserAddressCommand import RemoveUserAddressCommand
 
 # Queries y Query Handlers
 from Application.Queries.GetAllHelloWorldQuery import GetAllHelloWorldQuery
@@ -29,6 +36,8 @@ from Application.Queries.SearchHelloWorldQuery import SearchHelloWorldQuery
 from Application.QueryHandlers.GetAllHelloWorldHandler import GetAllHelloWorldHandler
 from Application.QueryHandlers.GetHelloWorldByIdHandler import GetHelloWorldByIdHandler
 from Application.QueryHandlers.SearchHelloWorldHandler import SearchHelloWorldHandler
+from Admin.Application.Queries.GetUserByIdQuery import GetUserByIdQuery
+from Admin.Application.Queries.GetAllUsersQuery import GetAllUsersQuery
 
 # Use Cases - Shows
 from Application.UseCases.Shows.SearchShowsUseCase import SearchShowsUseCase
@@ -40,6 +49,16 @@ from Application.EventHandlers.HelloWorldCreatedLogger import HelloWorldCreatedL
 from Application.EventHandlers.HelloWorldDeletedLogger import HelloWorldDeletedLogger
 from Application.EventHandlers.HelloWorldUpdatedLogger import HelloWorldUpdatedLogger
 from Infrastructure.Projections.HelloWorldProjection import HelloWorldProjection
+from Admin.Application.CommandHandlers.CreateUserHander import CreateUserHander
+from Admin.Application.CommandHandlers.UpdateUserHandler import UpdateUserHandler
+from Admin.Application.CommandHandlers.DeleteUserHandler import DeleteUserHandler
+from Admin.Application.CommandHandlers.AddUserAddressHandler import AddUserAddressHandler
+from Admin.Application.CommandHandlers.UpdateUserAddressHandler import UpdateUserAddressHandler
+from Admin.Application.CommandHandlers.RemoveUserAddressHandler import RemoveUserAddressHandler
+from Admin.Application.QueryHandlers.GetUserByIdHandler import GetUserByIdHandler
+from Admin.Application.QueryHandlers.GetAllUsersHandler import GetAllUsersHandler
+from Admin.Infrastructure.Repository.UserWriteRepository import UserWriteRepository
+from Admin.Infrastructure.Repository.UserReadRepository import UserReadRepository
 
 
 class Container(containers.DeclarativeContainer):
@@ -95,6 +114,15 @@ class Container(containers.DeclarativeContainer):
         api_host=config.stream_availability_host,
         api_key=config.stream_availability_key
     )
+    
+    admin_user_write_repository = providers.Factory(
+        UserWriteRepository
+    )
+    
+    admin_user_read_repository = providers.Factory(
+        UserReadRepository
+    )
+
 
     # ========== CQRS - COMMAND HANDLERS ==========
 
@@ -116,6 +144,43 @@ class Container(containers.DeclarativeContainer):
         read_repository=hello_world_read_repository,
         event_dispatcher=event_dispatcher
     )
+    
+    create_user_command_handler = providers.Factory(
+        CreateUserHander,
+        write_repository=admin_user_write_repository,
+        event_dispatcher=event_dispatcher
+    )
+    
+    update_user_command_handler = providers.Factory(
+        UpdateUserHandler,
+        write_repository=admin_user_write_repository,
+        read_repository=admin_user_read_repository,
+        event_dispatcher=event_dispatcher
+    )
+    
+    delete_user_command_handler = providers.Factory(
+        DeleteUserHandler,
+        write_repository=admin_user_write_repository,
+        event_dispatcher=event_dispatcher
+    )
+    
+    add_user_address_command_handler = providers.Factory(
+        AddUserAddressHandler,
+        write_repository=admin_user_write_repository,
+        event_dispatcher=event_dispatcher
+    )
+    
+    update_user_address_command_handler = providers.Factory(
+        UpdateUserAddressHandler,
+        write_repository=admin_user_write_repository,
+        event_dispatcher=event_dispatcher
+    )
+    
+    remove_user_address_command_handler = providers.Factory(
+        RemoveUserAddressHandler,
+        write_repository=admin_user_write_repository,
+        event_dispatcher=event_dispatcher
+    )
 
     # ========== CQRS - QUERY HANDLERS ==========
 
@@ -132,6 +197,16 @@ class Container(containers.DeclarativeContainer):
     search_hello_world_query_handler = providers.Factory(
         SearchHelloWorldHandler,
         read_repository=hello_world_read_repository
+    )
+    
+    get_user_by_id_query_handler = providers.Factory(
+        GetUserByIdHandler,
+        read_repository=admin_user_read_repository
+    )
+    
+    get_all_users_query_handler = providers.Factory(
+        GetAllUsersHandler,
+        read_repository=admin_user_read_repository
     )
 
     # ========== CQRS - BUSES ==========
@@ -244,6 +319,30 @@ def _register_command_handlers(container: Container) -> None:
         DeleteHelloWorldCommand,
         container.delete_hello_world_command_handler()
     )
+    command_bus.register(
+        CreateUserCommand,
+        container.create_user_command_handler()
+    )
+    command_bus.register(
+        UpdateUserCommand,
+        container.update_user_command_handler()
+    )
+    command_bus.register(
+        DeleteUserCommand,
+        container.delete_user_command_handler()
+    )
+    command_bus.register(
+        AddUserAddressCommand,
+        container.add_user_address_command_handler()
+    )
+    command_bus.register(
+        UpdateUserAddressCommand,
+        container.update_user_address_command_handler()
+    )
+    command_bus.register(
+        RemoveUserAddressCommand,
+        container.remove_user_address_command_handler()
+    )
 
 
 def _register_query_handlers(container: Container) -> None:
@@ -267,4 +366,12 @@ def _register_query_handlers(container: Container) -> None:
     query_bus.register(
         SearchHelloWorldQuery,
         container.search_hello_world_query_handler()
+    )
+    query_bus.register(
+        GetUserByIdQuery,
+        container.get_user_by_id_query_handler()
+    )
+    query_bus.register(
+        GetAllUsersQuery,
+        container.get_all_users_query_handler()
     )

@@ -1,6 +1,9 @@
-class StringValueObject():
+from Shared.Domain.ValueObjects.ValueObject import ValueObject
+
+
+class StringValueObject(ValueObject):
     def __init__(
         self,
-        value:str
+        value: str,
     ):
-        self.value = value
+        super().__init__(value)

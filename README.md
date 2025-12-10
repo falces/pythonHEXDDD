@@ -5,6 +5,7 @@ Proyecto de ejemplo implementando **Arquitectura Hexagonal (Puertos y Adaptadore
 ## 📋 Tabla de Contenidos
 
 - [Arquitectura](#arquitectura)
+- [Módulos del Sistema](#módulos-del-sistema)
 - [Flujos de la Aplicación](#flujos-de-la-aplicación)
   - [Flujo de Inicialización](#1-flujo-de-inicialización-de-la-aplicación)
   - [Flujo de Escritura (Commands)](#2-flujo-de-escritura-commands---crear-helloworld)
@@ -52,7 +53,61 @@ El proyecto implementa una arquitectura en capas siguiendo los principios de Cle
 - ✅ **Event-Driven** - Domain Events con EventDispatcher
 - ✅ **Dependency Injection** - DI Container con dependency-injector
 - ✅ **Repository Pattern** - Abstracción de persistencia
-- ✅ **Use Cases** - Lógica de aplicación encapsulada
+- ✅ **Modular Architecture** - Módulos autocontenidos (Admin, HelloWorld)
+
+---
+
+## 📦 Módulos del Sistema
+
+### HelloWorld (Módulo Principal)
+- **Ubicación**: `app/Domain/HelloWorld/`, `app/Application/`, `app/Infrastructure/`
+- **Entidad**: `HelloWorld` (Aggregate Root)
+- **Value Objects**: `GreetingValueObject`
+- **Events**: `HelloWorldCreated`, `HelloWorldUpdated`, `HelloWorldDeleted`
+- **CQRS**: Completo con Commands, Queries, Handlers y Buses
+
+### Admin (Módulo Autocontenido - Hexagonal/DDD/CQRS)
+- **Ubicación**: `app/Admin/` (estructura DDD completa autocontenida)
+- **Entidad**: `User` (Aggregate Root con UUID) + `UserAddress` (Entidad hija)
+- **Value Objects**: `UsernameValueObject`, `EmailValueObject`, `UuidValueObject`
+- **Events**: `UserCreated`, `UserAddressAdded`, `UserAddressRemoved`
+- **CQRS Completo**: Commands y Queries con sus respectivos Handlers
+- **Validators**: `CreateUserValidator`, `UpdateUserValidator`
+- **Endpoints**: CRUD completo (`GET`, `POST`, `PUT/PATCH`, `DELETE`)
+
+```
+app/Admin/
+├── Application/
+│   ├── Commands/           # User: Create, Update, Delete | Address: Add, Update, Remove
+│   ├── CommandHandlers/    # User: Create, Update, Delete | Address: Add, Update, Remove
+│   ├── Queries/            # GetUserByIdQuery, GetAllUsersQuery
+│   ├── QueryHandlers/      # GetUserByIdHandler, GetAllUsersHandler
+│   └── ReadModels/         # UserReadModel
+├── Domain/
+│   ├── User.py             # Aggregate Root
+│   ├── Entities/           # UserAddress (entidad hija)
+│   ├── Events/             # UserCreated, UserAddressAdded, UserAddressRemoved
+│   ├── Exceptions/         # IncorrectUsernameException, IncorrectEmailException
+│   ├── Repository/         # Interfaces (Write/Read)
+│   └── ValueObjects/       # UsernameValueObject, EmailValueObject
+└── Infrastructure/
+    ├── Controller/         # AdminUserController (CRUD User + CRUD Address)
+    ├── Repository/         # UserWriteRepository, UserReadRepository
+    ├── Validators/         # User: Create, Update | Address: Add, Update
+    └── Persistence/        # UserModel, UserAddressModel, Mappers
+```
+
+### Admin2 (Módulo Simple - Sin DDD/CQRS/Hexagonal)
+- **Ubicación**: `app/Admin2/` (solo 3 archivos)
+- **Arquitectura**: Tradicional MVC simplificado
+- **Endpoints**: CRUD completo en ~150 líneas
+
+```
+app/Admin2/
+├── models.py      # Modelo SQLAlchemy con to_dict()
+├── services.py    # Lógica de negocio (UserService)
+└── controller.py  # Blueprint Flask con endpoints REST
+```
 
 ---
 
@@ -163,8 +218,20 @@ app.py (Flask App)
          │           └─► Infrastructure/Repository/HelloWorldWriteRepository.py
          │                 ├─► Mapea a modelo: HelloWorldMapper.toModel()
          │                 ├─► Ejecuta: db.session.add(model)
-         │                 ├─► Ejecuta: db.session.commit()
+         │                 ├─► Transacción gestionada automáticamente en BaseWriteRepository (Deferred Pattern)
          │                 └─► Retorna: HelloWorld con ID asignado
+      ### Deferred Pattern y Transacción Centralizada
+
+      **Deferred Pattern implementado:**
+      - La gestión de la transacción (begin/commit/rollback) está centralizada en `BaseWriteRepository`.
+      - Los repositorios hijos solo implementan la lógica de persistencia y dominio, sin preocuparse por la transacción.
+      - Los eventos de dominio se publican únicamente después de una transacción exitosa, garantizando consistencia.
+      - El patrón es transparente para cualquier repositorio de escritura: solo se debe heredar de `BaseWriteRepository`.
+      #### Deferred Pattern y Transacción Centralizada
+
+      En esta arquitectura, la gestión de la transacción está centralizada en la clase base `BaseWriteRepository`.
+      Esto significa que cualquier repositorio de escritura (por ejemplo, `UserWriteRepository`, `HelloWorldWriteRepository`) no necesita gestionar manualmente los bloques transaccionales (`with db.session.begin()`), ni preocuparse por el commit/rollback.
+      La lógica de persistencia y dominio se mantiene limpia y desacoplada, y los eventos de dominio se publican solo si la transacción se completa correctamente (Deferred Pattern).
          │
          ├─► Publica eventos de dominio
          │     └─► event_dispatcher.publish_multiple(eventos)
@@ -522,25 +589,44 @@ app/
 │   ├── log.py                     # Configuración de logging
 │   └── signals.py                 # Handlers de señales del sistema
 │
-├── Domain/                         # 🟢 Capa de Dominio (lógica de negocio)
+├── Admin/                          # 🆕 Módulo Admin (autocontenido)
+│   ├── Application/
+│   │   ├── Commands/              # CreateUserCommand
+│   │   ├── CommandHandlers/       # CreateUserHandler
+│   │   ├── Queries/               # GetUserByIdQuery
+│   │   ├── QueryHandlers/         # GetUserByIdHandler
+│   │   └── ReadModels/            # UserReadModel
+│   ├── Domain/
+│   │   ├── User.py                # Aggregate Root (UUID)
+│   │   ├── UserWriteRepositoryInterface.py
+│   │   ├── UserReadRepositoryInterface.py
+│   │   ├── Events/                # UserCreated
+│   │   ├── Exceptions/            # IncorrectUsernameException, IncorrectEmailException
+│   │   └── ValueObjects/          # UsernameValueObject, EmailValueObject
+│   └── Infrastructure/
+│       ├── Controller/            # AdminUserController
+│       ├── Repository/            # UserWriteRepository, UserReadRepository
+│       └── Persistence/           # UserModel, UserMapper
+│
+├── Domain/                         # 🟢 Capa de Dominio (HelloWorld)
 │   └── HelloWorld/
 │       ├── HelloWorld.py          # Entidad de dominio (Aggregate Root)
-│       ├── HelloWorldRepositoryInterface.py  # Puerto (interfaz)
+│       ├── HelloWorldRepositoryInterface.py  # Puerto Write (interfaz)
+│       ├── HelloWorldReadRepositoryInterface.py  # Puerto Read (interfaz)
 │       ├── Events/
-│       │   ├── HelloWorldCreated.py         # Evento de dominio
-│       │   └── HelloWorldDeleted.py         # Evento de dominio
+│       │   ├── HelloWorldCreated.py
+│       │   ├── HelloWorldUpdated.py
+│       │   └── HelloWorldDeleted.py
 │       ├── Exceptions/
 │       │   └── IncorrectGreetingException.py
 │       └── ValueObjects/
-│           └── Greeting.py        # Value Object con validaciones
+│           └── GreetingValueObject.py
 │
-├── Application/                    # 🟡 Capa de Aplicación (casos de uso)
+├── Application/                    # 🟡 Capa de Aplicación (HelloWorld)
 │   ├── UseCases/                  # Use Cases (legacy, compatibilidad)
-│   │   └── HelloWorld/
-│   │       ├── CreateHelloWorldUseCase.py
-│   │       ├── GetAllHelloWorldUseCase.py
-│   │       ├── GetHelloWorldByIdUseCase.py
-│   │       └── DeleteHelloWorldUseCase.py
+│   │   └── Shows/
+│   │       ├── SearchShowsUseCase.py
+│   │       └── GetShowByIdUseCase.py
 │   │
 │   ├── Commands/                  # 🔵 CQRS - Commands (escritura)
 │   │   ├── CreateHelloWorldCommand.py

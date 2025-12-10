@@ -110,6 +110,285 @@ Elimina un HelloWorld por ID.
 }
 ```
 
+---
+
+### Admin API (Hexagonal/DDD/CQRS)
+
+El módulo Admin implementa CRUD completo con arquitectura hexagonal, DDD y CQRS.
+
+#### `GET /api/v1/admin/users/`
+Obtiene todos los usuarios registrados.
+
+**Query Parameters:**
+- `limit` (opcional) - Número máximo de resultados (default: 10)
+- `offset` (opcional) - Desplazamiento para paginación (default: 0)
+
+**Respuesta exitosa (200):**
+```json
+{
+  "users": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "username": "john_doe",
+      "email": "john@example.com",
+      "addresses": [
+        {
+          "street": "123 Main St",
+          "city": "New York",
+          "country": "USA"
+        }
+      ]
+    }
+  ],
+  "total": 1,
+  "limit": 10,
+  "offset": 0
+}
+```
+
+#### `GET /api/v1/admin/users/{id}`
+Obtiene un usuario específico por ID (UUID).
+
+**Parámetros:**
+- `id` (path) - UUID del usuario
+
+**Respuesta exitosa (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "john_doe",
+  "email": "john@example.com",
+  "addresses": []
+}
+```
+
+**Respuesta error (404):**
+```json
+{
+  "error": "User not found"
+}
+```
+
+#### `POST /api/v1/admin/users/`
+Crea un nuevo usuario usando **CQRS con Command Bus**.
+
+**Request Body:**
+```json
+{
+  "username": "john_doe",
+  "email": "john@example.com"
+}
+```
+
+**Respuesta exitosa (201):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "john_doe",
+  "email": "john@example.com"
+}
+```
+
+**Respuesta error (400):**
+```json
+{
+  "error": "Validation failed",
+  "details": {
+    "username": "Username must be between 3 and 50 characters",
+    "email": "Invalid email format"
+  }
+}
+```
+
+#### `PUT /api/v1/admin/users/{id}` / `PATCH /api/v1/admin/users/{id}`
+Actualiza un usuario existente.
+
+**Parámetros:**
+- `id` (path) - UUID del usuario
+
+**Request Body:**
+```json
+{
+  "username": "john_updated",
+  "email": "john.updated@example.com"
+}
+```
+
+**Respuesta exitosa (200):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "john_updated",
+  "email": "john.updated@example.com"
+}
+```
+
+#### `DELETE /api/v1/admin/users/{id}`
+Elimina un usuario por ID.
+
+**Parámetros:**
+- `id` (path) - UUID del usuario
+
+**Respuesta exitosa (200):**
+```json
+{
+  "message": "User deleted successfully"
+}
+```
+
+**Respuesta error (404):**
+```json
+{
+  "error": "User not found"
+}
+```
+
+---
+
+### User Addresses (Direcciones de Usuario)
+
+Los endpoints de direcciones permiten gestionar las direcciones asociadas a un usuario.
+
+#### `GET /api/v1/admin/users/{user_id}/addresses`
+Obtiene todas las direcciones de un usuario.
+
+**Parámetros:**
+- `user_id` (path) - UUID del usuario
+
+**Respuesta exitosa (200):**
+```json
+[
+  {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "street": "123 Main St",
+    "city": "New York",
+    "country": "USA",
+    "postal_code": "10001"
+  }
+]
+```
+
+#### `GET /api/v1/admin/users/{user_id}/addresses/{address_id}`
+Obtiene una dirección específica de un usuario.
+
+**Parámetros:**
+- `user_id` (path) - UUID del usuario
+- `address_id` (path) - UUID de la dirección
+
+**Respuesta exitosa (200):**
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "street": "123 Main St",
+  "city": "New York",
+  "country": "USA",
+  "postal_code": "10001"
+}
+```
+
+#### `POST /api/v1/admin/users/{user_id}/addresses`
+Crea una nueva dirección para un usuario.
+
+**Parámetros:**
+- `user_id` (path) - UUID del usuario
+
+**Request Body:**
+```json
+{
+  "street": "456 Oak Ave",
+  "city": "Los Angeles",
+  "country": "USA",
+  "postal_code": "90001"
+}
+```
+
+**Respuesta exitosa (201):**
+```json
+{
+  "id": "789e0123-e89b-12d3-a456-426614174000",
+  "street": "456 Oak Ave",
+  "city": "Los Angeles",
+  "country": "USA",
+  "postal_code": "90001"
+}
+```
+
+#### `PUT /api/v1/admin/users/{user_id}/addresses/{address_id}` / `PATCH /api/v1/admin/users/{user_id}/addresses/{address_id}`
+Actualiza una dirección de un usuario.
+
+**Parámetros:**
+- `user_id` (path) - UUID del usuario
+- `address_id` (path) - UUID de la dirección
+
+**Request Body:**
+```json
+{
+  "street": "789 Updated St",
+  "city": "Chicago",
+  "country": "USA",
+  "postal_code": "60601"
+}
+```
+
+**Respuesta exitosa (200):**
+```json
+{
+  "id": "123e4567-e89b-12d3-a456-426614174000",
+  "street": "789 Updated St",
+  "city": "Chicago",
+  "country": "USA",
+  "postal_code": "60601"
+}
+```
+
+#### `DELETE /api/v1/admin/users/{user_id}/addresses/{address_id}`
+Elimina una dirección de un usuario.
+
+**Parámetros:**
+- `user_id` (path) - UUID del usuario
+- `address_id` (path) - UUID de la dirección
+
+**Respuesta exitosa (200):**
+```json
+{
+  "message": "Address deleted successfully"
+}
+```
+
+---
+
+### Admin2 API (Arquitectura Simple)
+
+El módulo Admin2 implementa CRUD con arquitectura tradicional (sin DDD/CQRS).
+
+#### `GET /api/v1/admin2/users/`
+Obtiene todos los usuarios.
+
+**Respuesta exitosa:**
+```json
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "email": "admin@example.com"
+  }
+]
+```
+
+#### `GET /api/v1/admin2/users/{id}`
+Obtiene un usuario por ID numérico.
+
+#### `POST /api/v1/admin2/users/`
+Crea un nuevo usuario.
+
+#### `PUT /api/v1/admin2/users/{id}`
+Actualiza un usuario.
+
+#### `DELETE /api/v1/admin2/users/{id}`
+Elimina un usuario.
+
+---
+
 ### Shows/Movies API
 
 #### `GET /api/v1/movies/`
@@ -167,6 +446,52 @@ Obtiene un show específico por ID.
 ```
 
 ## Modelos de Datos
+
+### User (Admin)
+```yaml
+User:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: UUID único del usuario
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    username:
+      type: string
+      minLength: 3
+      maxLength: 50
+      description: Nombre de usuario
+      example: "john_doe"
+    email:
+      type: string
+      format: email
+      description: Email del usuario
+      example: "john@example.com"
+    addresses:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserAddress'
+```
+
+### UserAddress
+```yaml
+UserAddress:
+  type: object
+  properties:
+    street:
+      type: string
+      description: Calle
+      example: "123 Main St"
+    city:
+      type: string
+      description: Ciudad
+      example: "New York"
+    country:
+      type: string
+      description: País
+      example: "USA"
+```
 
 ### HelloWorld
 ```yaml
@@ -330,4 +655,4 @@ Puedes importar la especificación OpenAPI directamente en Postman:
 
 ---
 
-**Última actualización**: Noviembre 2025
+**Última actualización**: Diciembre 2025

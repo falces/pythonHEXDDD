@@ -41,7 +41,27 @@ mkdir -p /home/falces/Code/tools/pythonHEXDDD/app/log
 tests/
 ├── conftest.py                 # Fixtures globales
 ├── unit/                       # Tests unitarios (aislados con mocks)
-│   ├── Application/
+│   ├── Admin/                  # 🆕 Tests del módulo Admin (Hexagonal/DDD/CQRS)
+│   │   ├── Application/
+│   │   │   ├── test_admin_commands.py
+│   │   │   ├── test_admin_command_handlers.py
+│   │   │   ├── test_admin_queries.py
+│   │   │   ├── test_admin_query_handlers.py
+│   │   │   └── test_admin_read_models.py
+│   │   ├── domain/
+│   │   │   ├── entities/
+│   │   │   │   └── test_admin_user.py
+│   │   │   └── value_objects/
+│   │   │       └── test_admin_user_value_objects.py
+│   │   ├── events/
+│   │   │   └── test_admin_user_events.py
+│   │   └── Infrastructure/
+│   │       ├── test_admin_controller.py
+│   │       ├── test_admin_validators.py
+│   │       └── test_admin_write_repository.py
+│   ├── Admin2/                 # 🆕 Tests del módulo Admin2 (Simple)
+│   │   └── test_admin2_crud.py
+│   ├── Application/            # Tests de HelloWorld
 │   │   ├── test_commands.py           # Tests de Commands (CQRS)
 │   │   ├── test_command_handlers.py   # Tests de Command Handlers
 │   │   ├── test_queries.py            # Tests de Queries (CQRS)
@@ -50,7 +70,8 @@ tests/
 │   ├── Shared/
 │   │   ├── test_command_bus.py        # Tests de Command Bus
 │   │   ├── test_query_bus.py          # Tests de Query Bus
-│   │   └── test_event_dispatcher.py   # Tests de Event Dispatcher
+│   │   ├── test_event_dispatcher.py   # Tests de Event Dispatcher
+│   │   └── test_base_write_repository.py  # 🆕 Tests de BaseWriteRepository
 │   ├── domain/
 │   │   ├── entities/          # Tests de entidades del dominio
 │   │   └── value_objects/     # Tests de value objects
@@ -61,6 +82,8 @@ tests/
     ├── test_hello_world_api.py
     └── test_hello_world_repository.py
 ```
+
+**Estado actual:** 281+ tests pasando con 90%+ cobertura.
 
 ## Ejecutar Tests
 
@@ -77,6 +100,15 @@ python -m pytest tests/ -v
 ```bash
 # Todos los tests con resumen corto
 python -m pytest tests/
+
+# Tests solo del módulo Admin (Hexagonal/DDD/CQRS)
+python -m pytest tests/unit/Admin/ -v
+
+# Tests solo del módulo Admin2 (Simple)
+python -m pytest tests/unit/Admin2/ -v
+
+# Tests de componentes compartidos (BaseWriteRepository, Buses, etc.)
+python -m pytest tests/unit/Shared/ -v
 
 # Solo mostrar el resumen (más rápido de leer)
 python -m pytest tests/ -q
