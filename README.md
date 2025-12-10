@@ -218,8 +218,20 @@ app.py (Flask App)
          │           └─► Infrastructure/Repository/HelloWorldWriteRepository.py
          │                 ├─► Mapea a modelo: HelloWorldMapper.toModel()
          │                 ├─► Ejecuta: db.session.add(model)
-         │                 ├─► Ejecuta: db.session.commit()
+         │                 ├─► Transacción gestionada automáticamente en BaseWriteRepository (Deferred Pattern)
          │                 └─► Retorna: HelloWorld con ID asignado
+      ### Deferred Pattern y Transacción Centralizada
+
+      **Deferred Pattern implementado:**
+      - La gestión de la transacción (begin/commit/rollback) está centralizada en `BaseWriteRepository`.
+      - Los repositorios hijos solo implementan la lógica de persistencia y dominio, sin preocuparse por la transacción.
+      - Los eventos de dominio se publican únicamente después de una transacción exitosa, garantizando consistencia.
+      - El patrón es transparente para cualquier repositorio de escritura: solo se debe heredar de `BaseWriteRepository`.
+      #### Deferred Pattern y Transacción Centralizada
+
+      En esta arquitectura, la gestión de la transacción está centralizada en la clase base `BaseWriteRepository`.
+      Esto significa que cualquier repositorio de escritura (por ejemplo, `UserWriteRepository`, `HelloWorldWriteRepository`) no necesita gestionar manualmente los bloques transaccionales (`with db.session.begin()`), ni preocuparse por el commit/rollback.
+      La lógica de persistencia y dominio se mantiene limpia y desacoplada, y los eventos de dominio se publican solo si la transacción se completa correctamente (Deferred Pattern).
          │
          ├─► Publica eventos de dominio
          │     └─► event_dispatcher.publish_multiple(eventos)

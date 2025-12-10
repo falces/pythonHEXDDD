@@ -229,6 +229,7 @@ class AggregateRootBase(EntityBase):
 │                                                                 │
 │    b) Persistir:                                                │
 │       saved = repository.save(hello_world)                      │
+│       # La transacción es gestionada automáticamente en BaseWriteRepository (Deferred Pattern)
 │                                                                 │
 │    c) Marcar como creado (registra evento):                     │
 │       saved.mark_as_created(saved._id)                          │
@@ -240,6 +241,12 @@ class AggregateRootBase(EntityBase):
 │                                                                 │
 │    e) Publicar eventos:                                         │
 │       event_dispatcher.publish_multiple(events)                 │
+### Deferred Pattern y Transacción Centralizada
+
+La gestión de la transacción (begin/commit/rollback) está centralizada en `BaseWriteRepository`.
+Los repositorios hijos solo implementan la lógica de persistencia y dominio, sin preocuparse por la transacción.
+Los eventos de dominio se publican únicamente después de una transacción exitosa, garantizando consistencia.
+El patrón es transparente para cualquier repositorio de escritura: solo se debe heredar de `BaseWriteRepository`.
 └────────────────┬────────────────────────────────────────────────┘
                  │
                  ▼
