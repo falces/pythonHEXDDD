@@ -1,11 +1,10 @@
-from typing import Self, Optional
-import uuid
+from typing import Optional
 from Admin.Domain.ValueObjects.UsernameValueObject import UsernameValueObject
 from Admin.Domain.ValueObjects.EmailValueObject import EmailValueObject
 from Admin.Domain.Entities.UserAddress import UserAddress
 from Shared.Domain.Entities.EntityBase import AggregateRootBase
 from Shared.Domain.ValueObjects.UuidValueObject import UuidValueObject
-from Admin.Domain.Events.UserCreated import UserCreated
+from Admin.Domain.Events.UserCreatedDomainEvent import UserCreatedDomainEvent
 from Admin.Domain.Events.UserAddressAdded import UserAddressAdded
 from Admin.Domain.Events.UserAddressRemoved import UserAddressRemoved
 
@@ -16,13 +15,10 @@ class User(AggregateRootBase):
         self,
         username: UsernameValueObject,
         email: EmailValueObject,
-        id: UuidValueObject = None,
+        id: UuidValueObject,
         addresses: list[UserAddress] = None,
     ):
         super().__init__()
-        
-        if id is None:
-            id = UuidValueObject.create(str(uuid.uuid4()))
         
         self.id = id
         self.username = username
@@ -31,17 +27,16 @@ class User(AggregateRootBase):
         
     @staticmethod
     def create(
-        username: UsernameValueObject,
-        email: EmailValueObject,
-        id: UuidValueObject = None,
-    ) -> Self:
+        username: str,
+        email: str,
+        id: str = None,
+    ) -> 'User':
+        
         return User(
-            username=username,
-            email=email,
-            id=id,
+            username=UsernameValueObject.create(username),
+            email=EmailValueObject.create(email),
+            id=UuidValueObject.create(id),
         )
-    
-    # --- Gestión de direcciones (entidad hija) ---
     
     @property
     def addresses(self) -> list[UserAddress]:
@@ -85,7 +80,8 @@ class User(AggregateRootBase):
         return None
         
     def mark_as_created(self) -> None:
-        event = UserCreated(
+        """Crea el evento de dominio y lo registra."""
+        event = UserCreatedDomainEvent(
             user_id=self.id.value,
             username=self.username.value,
             email=self.email.value,

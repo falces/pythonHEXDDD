@@ -17,9 +17,15 @@ class DomainEvent(ABC):
     - Contienen toda la información necesaria para que los handlers actúen
     """
     
-    def __init__(self):
+    def __init__(
+        self,
+        occurred_on: datetime = None,
+    ):
         self._event_id: str = str(uuid.uuid4())
-        self._occurred_on: datetime = datetime.now()
+        if occurred_on is None:
+            self._occurred_on: datetime = datetime.now()
+        else:
+            self._occurred_on: datetime = occurred_on
     
     @property
     def event_id(self) -> str:

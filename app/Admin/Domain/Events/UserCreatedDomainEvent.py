@@ -2,10 +2,16 @@ from typing import Any, Dict
 from Shared.Domain.Events.DomainEvent import DomainEvent
 
 
-class UserCreated(DomainEvent):
+class UserCreatedDomainEvent(DomainEvent):
     
-    def __init__(self, user_id: str, username: str, email: str):
+    def __init__(
+        self,
+        user_id: str,
+        username: str,
+        email: str,
+    ):
         super().__init__()
+        
         self._user_id = user_id
         self._username = username
         self._email = email

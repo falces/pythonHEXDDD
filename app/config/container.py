@@ -25,7 +25,7 @@ from Admin.Application.Queries.GetAllUsersQuery import GetAllUsersQuery
 
 # Event System
 from Shared.Infrastructure.Events.EventDispatcher import EventDispatcher
-from Admin.Application.CommandHandlers.CreateUserHander import CreateUserHander
+from Admin.Application.CommandHandlers.CreateUserHandler import CreateUserHandler
 from Admin.Application.CommandHandlers.UpdateUserHandler import UpdateUserHandler
 from Admin.Application.CommandHandlers.DeleteUserHandler import DeleteUserHandler
 from Admin.Application.CommandHandlers.AddUserAddressHandler import AddUserAddressHandler
@@ -73,7 +73,7 @@ class Container(containers.DeclarativeContainer):
     # ========== CQRS - COMMAND HANDLERS ==========
  
     create_user_command_handler = providers.Factory(
-        CreateUserHander,
+        CreateUserHandler,
         write_repository=admin_user_write_repository,
         event_dispatcher=event_dispatcher
     )
@@ -171,8 +171,8 @@ def _register_event_handlers(container: Container) -> None:
         container: El container con las dependencias
     """
     dispatcher = container.event_dispatcher()
-
-
+    # Aquí es donde debes agregar:
+    # dispatcher.subscribe(container.tu_handler_aqui())
 
 
 def _register_command_handlers(container: Container) -> None:
